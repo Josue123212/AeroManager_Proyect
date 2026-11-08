@@ -17,7 +17,7 @@ public class GetRolesQueryHandler
 
     public async Task<IEnumerable<RolDto>> Handle(GetRolesQuery query, CancellationToken cancellationToken = default)
     {
-        var entities = await _repository.GetAllAsync(cancellationToken);
+        var entities = await _repository.GetAllAsync();
         return entities.Select(e => new RolDto(
             e.Id,
             e.Nombre,
@@ -29,7 +29,7 @@ public class GetRolesQueryHandler
 
     public async Task<RolDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id, cancellationToken);
+        var entity = await _repository.GetByIdAsync(id);
         if (entity == null) return null;
 
         return new RolDto(

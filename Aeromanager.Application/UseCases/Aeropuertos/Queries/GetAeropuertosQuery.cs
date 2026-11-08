@@ -17,7 +17,7 @@ public class GetAeropuertosQueryHandler
 
     public async Task<IEnumerable<AeropuertoDto>> Handle(GetAeropuertosQuery query, CancellationToken cancellationToken = default)
     {
-        var entities = await _repository.GetAllAsync(cancellationToken);
+        var entities = await _repository.GetAllAsync();
         return entities.Select(e => new AeropuertoDto(
             e.Id,
             e.Nombre,
@@ -31,7 +31,7 @@ public class GetAeropuertosQueryHandler
 
     public async Task<AeropuertoDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id, cancellationToken);
+        var entity = await _repository.GetByIdAsync(id);
         if (entity == null) return null;
 
         return new AeropuertoDto(

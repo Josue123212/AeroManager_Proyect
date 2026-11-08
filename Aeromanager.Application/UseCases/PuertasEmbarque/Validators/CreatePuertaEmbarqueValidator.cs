@@ -8,8 +8,8 @@ public class CreatePuertaEmbarqueValidator : AbstractValidator<CreatePuertaEmbar
     public CreatePuertaEmbarqueValidator()
     {
         RuleFor(x => x.CodigoGate)
-            .NotEmpty().WithMessage("El código del gate es requerido.")
-            .MaximumLength(10).WithMessage("El código no debe superar 10 caracteres.");
+            .NotEmpty().WithMessage("El cÃ³digo del gate es requerido.")
+            .MaximumLength(10).WithMessage("El cÃ³digo no debe superar 10 caracteres.");
 
         RuleFor(x => x.Estado)
             .NotEmpty().WithMessage("El estado del gate es requerido.")

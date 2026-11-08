@@ -8,11 +8,11 @@ public class CreateAvionValidator : AbstractValidator<CreateAvionCommand>
     public CreateAvionValidator()
     {
         RuleFor(x => x.Matricula)
-            .NotEmpty().WithMessage("La matrícula es requerida.")
-            .MaximumLength(20).WithMessage("La matrícula no debe superar 20 caracteres.");
+            .NotEmpty().WithMessage("La matrÃ­cula es requerida.")
+            .MaximumLength(20).WithMessage("La matrÃ­cula no debe superar 20 caracteres.");
 
         RuleFor(x => x.CapacidadFisica)
-            .GreaterThan(0).WithMessage("La capacidad física debe ser mayor a cero.");
+            .GreaterThan(0).WithMessage("La capacidad fÃ­sica debe ser mayor a cero.");
 
         RuleFor(x => x.EstadoOperativo)
             .NotEmpty().WithMessage("El estado operativo es requerido.");

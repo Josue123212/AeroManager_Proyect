@@ -26,7 +26,7 @@ public class UpdateModeloAvionCommandHandler
 
     public async Task<ModeloAvionDto?> Handle(UpdateModeloAvionCommand command, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(command.Id, cancellationToken);
+        var entity = await _repository.GetByIdAsync(command.Id);
         if (entity == null) return null;
 
         entity.Fabricante = command.Fabricante;
@@ -36,7 +36,7 @@ public class UpdateModeloAvionCommandHandler
         entity.Activo = command.Activo;
 
         _repository.Update(entity);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         return new ModeloAvionDto(
             entity.Id,

@@ -26,7 +26,7 @@ public class UpdateAeropuertoCommandHandler
 
     public async Task<AeropuertoDto?> Handle(UpdateAeropuertoCommand command, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(command.Id, cancellationToken);
+        var entity = await _repository.GetByIdAsync(command.Id);
         if (entity == null) return null;
 
         entity.Nombre = command.Nombre;
@@ -36,7 +36,7 @@ public class UpdateAeropuertoCommandHandler
         entity.Activo = command.Activo;
 
         _repository.Update(entity);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         return new AeropuertoDto(
             entity.Id,

@@ -32,8 +32,8 @@ public class CreateAerolineaCommandHandler
             Activo = true
         };
 
-        await _repository.AddAsync(entity, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _repository.AddAsync(entity);
+        await _unitOfWork.SaveChangesAsync();
 
         return new AerolineaDto(
             entity.Id,

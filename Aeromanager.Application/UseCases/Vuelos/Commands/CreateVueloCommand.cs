@@ -1,6 +1,7 @@
 using Aeromanager.Application.DTOs;
 using Aeromanager.Domain.Entities;
 using Aeromanager.Domain.Ports;
+using Aeromanager.Domain.Services;
 
 namespace Aeromanager.Application.UseCases.Vuelos.Commands;
 
@@ -19,11 +20,13 @@ public record CreateVueloCommand(
 public class CreateVueloCommandHandler
 {
     private readonly IVueloRepository _repository;
+    private readonly VueloDomainService _vueloDomainService;
     private readonly IUnitOfWork _unitOfWork;
 
-    public CreateVueloCommandHandler(IVueloRepository repository, IUnitOfWork unitOfWork)
+    public CreateVueloCommandHandler(IVueloRepository repository, VueloDomainService vueloDomainService, IUnitOfWork unitOfWork)
     {
         _repository = repository;
+        _vueloDomainService = vueloDomainService;
         _unitOfWork = unitOfWork;
     }
 
@@ -44,8 +47,10 @@ public class CreateVueloCommandHandler
             Activo = true
         };
 
-        await _repository.AddAsync(entity, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _vueloDomainService.ValidarReglasDeVuelo(entity);
+
+        await _repository.AddAsync(entity);
+        await _unitOfWork.SaveChangesAsync();
 
         return new VueloDto(
             entity.Id,

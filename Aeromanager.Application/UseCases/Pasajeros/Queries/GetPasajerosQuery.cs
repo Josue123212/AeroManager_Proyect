@@ -17,7 +17,7 @@ public class GetPasajerosQueryHandler
 
     public async Task<IEnumerable<PasajeroDto>> Handle(GetPasajerosQuery query, CancellationToken cancellationToken = default)
     {
-        var entities = await _repository.GetAllAsync(cancellationToken);
+        var entities = await _repository.GetAllAsync();
         return entities.Select(e => new PasajeroDto(
             e.Id,
             e.Nombres,
@@ -34,7 +34,7 @@ public class GetPasajerosQueryHandler
 
     public async Task<PasajeroDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id, cancellationToken);
+        var entity = await _repository.GetByIdAsync(id);
         if (entity == null) return null;
 
         return new PasajeroDto(

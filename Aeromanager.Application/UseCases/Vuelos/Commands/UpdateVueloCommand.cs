@@ -1,6 +1,7 @@
 using Aeromanager.Application.DTOs;
 using Aeromanager.Domain.Entities;
 using Aeromanager.Domain.Ports;
+using Aeromanager.Domain.Services;
 
 namespace Aeromanager.Application.UseCases.Vuelos.Commands;
 
@@ -21,17 +22,19 @@ public record UpdateVueloCommand(
 public class UpdateVueloCommandHandler
 {
     private readonly IVueloRepository _repository;
+    private readonly VueloDomainService _vueloDomainService;
     private readonly IUnitOfWork _unitOfWork;
 
-    public UpdateVueloCommandHandler(IVueloRepository repository, IUnitOfWork unitOfWork)
+    public UpdateVueloCommandHandler(IVueloRepository repository, VueloDomainService vueloDomainService, IUnitOfWork unitOfWork)
     {
         _repository = repository;
+        _vueloDomainService = vueloDomainService;
         _unitOfWork = unitOfWork;
     }
 
     public async Task<VueloDto?> Handle(UpdateVueloCommand command, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(command.Id, cancellationToken);
+        var entity = await _repository.GetByIdAsync(command.Id);
         if (entity == null) return null;
 
         entity.NumeroVuelo = command.NumeroVuelo.ToUpperInvariant();
@@ -45,8 +48,10 @@ public class UpdateVueloCommandHandler
         entity.Estado = command.Estado;
         entity.Activo = command.Activo;
 
+        _vueloDomainService.ValidarReglasDeVuelo(entity);
+
         _repository.Update(entity);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         return new VueloDto(
             entity.Id,

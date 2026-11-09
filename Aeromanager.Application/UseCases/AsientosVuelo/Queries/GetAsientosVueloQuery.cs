@@ -17,7 +17,7 @@ public class GetAsientosVueloQueryHandler
 
     public async Task<IEnumerable<AsientoVueloDto>> Handle(GetAsientosVueloQuery query, CancellationToken cancellationToken = default)
     {
-        var entities = await _repository.GetAllAsync(cancellationToken);
+        var entities = await _repository.GetAllAsync();
         return entities.Select(e => new AsientoVueloDto(
             e.Id,
             e.VueloId,
@@ -31,7 +31,7 @@ public class GetAsientosVueloQueryHandler
 
     public async Task<AsientoVueloDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id, cancellationToken);
+        var entity = await _repository.GetByIdAsync(id);
         if (entity == null) return null;
 
         return new AsientoVueloDto(

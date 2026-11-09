@@ -17,7 +17,7 @@ public class GetReservasQueryHandler
 
     public async Task<IEnumerable<ReservaDto>> Handle(GetReservasQuery query, CancellationToken cancellationToken = default)
     {
-        var entities = await _repository.GetAllAsync(cancellationToken);
+        var entities = await _repository.GetAllAsync();
         return entities.Select(e => new ReservaDto(
             e.Id,
             e.CodigoTicket,
@@ -32,7 +32,7 @@ public class GetReservasQueryHandler
 
     public async Task<ReservaDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id, cancellationToken);
+        var entity = await _repository.GetByIdAsync(id);
         if (entity == null) return null;
 
         return new ReservaDto(

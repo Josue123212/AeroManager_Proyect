@@ -1,6 +1,7 @@
 using Aeromanager.Application.DTOs;
 using Aeromanager.Domain.Entities;
 using Aeromanager.Domain.Ports;
+using Aeromanager.Domain.Services;
 
 namespace Aeromanager.Application.UseCases.Rutas.Commands;
 
@@ -15,11 +16,13 @@ public record CreateRutaCommand(
 public class CreateRutaCommandHandler
 {
     private readonly IRutaRepository _repository;
+    private readonly RutaDomainService _rutaDomainService;
     private readonly IUnitOfWork _unitOfWork;
 
-    public CreateRutaCommandHandler(IRutaRepository repository, IUnitOfWork unitOfWork)
+    public CreateRutaCommandHandler(IRutaRepository repository, RutaDomainService rutaDomainService, IUnitOfWork unitOfWork)
     {
         _repository = repository;
+        _rutaDomainService = rutaDomainService;
         _unitOfWork = unitOfWork;
     }
 
@@ -36,8 +39,10 @@ public class CreateRutaCommandHandler
             Activo = true
         };
 
-        await _repository.AddAsync(entity, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _rutaDomainService.ValidarReglasDeRuta(entity);
+
+        await _repository.AddAsync(entity);
+        await _unitOfWork.SaveChangesAsync();
 
         return new RutaDto(
             entity.Id,

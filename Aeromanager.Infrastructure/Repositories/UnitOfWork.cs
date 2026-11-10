@@ -1,11 +1,13 @@
 using Aeromanager.Domain.Ports;
 using Aeromanager.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Aeromanager.Infrastructure.Repositories;
 
 public class UnitOfWork : IUnitOfWork
 {
     private readonly AeroManagerDbContext _context;
+    private IDbContextTransaction? _currentTransaction;
     private bool _disposed;
 
     public UnitOfWork(AeroManagerDbContext context)
@@ -16,6 +18,51 @@ public class UnitOfWork : IUnitOfWork
     public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         return await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        if (_currentTransaction is not null)
+        {
+            return;
+        }
+
+        _currentTransaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+    }
+
+    public async Task CommitTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+            if (_currentTransaction is not null)
+            {
+                await _currentTransaction.CommitAsync(cancellationToken);
+            }
+        }
+        catch
+        {
+            await RollbackTransactionAsync(cancellationToken);
+            throw;
+        }
+        finally
+        {
+            if (_currentTransaction is not null)
+            {
+                await _currentTransaction.DisposeAsync();
+                _currentTransaction = null;
+            }
+        }
+    }
+
+    public async Task RollbackTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        if (_currentTransaction is not null)
+        {
+            await _currentTransaction.RollbackAsync(cancellationToken);
+            await _currentTransaction.DisposeAsync();
+            _currentTransaction = null;
+        }
     }
 
     public void Dispose()
@@ -30,6 +77,7 @@ public class UnitOfWork : IUnitOfWork
         {
             if (disposing)
             {
+                _currentTransaction?.Dispose();
                 _context.Dispose();
             }
             _disposed = true;

@@ -29,7 +29,7 @@ public class UpdatePasajeroCommandHandler
 
     public async Task<PasajeroDto?> Handle(UpdatePasajeroCommand command, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(command.Id, cancellationToken);
+        var entity = await _repository.GetByIdAsync(command.Id);
         if (entity == null) return null;
 
         entity.Nombres = command.Nombres;
@@ -42,7 +42,7 @@ public class UpdatePasajeroCommandHandler
         entity.Activo = command.Activo;
 
         _repository.Update(entity);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         return new PasajeroDto(
             entity.Id,

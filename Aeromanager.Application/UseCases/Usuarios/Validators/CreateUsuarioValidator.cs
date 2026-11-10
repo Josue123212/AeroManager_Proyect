@@ -13,10 +13,10 @@ public class CreateUsuarioValidator : AbstractValidator<CreateUsuarioCommand>
 
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("El email es requerido.")
-            .EmailAddress().WithMessage("El formato del email no es válido.")
+            .EmailAddress().WithMessage("El formato del email no es vÃ¡lido.")
             .MaximumLength(150).WithMessage("El email no debe exceder los 150 caracteres.");
 
         RuleFor(x => x.PasswordHash)
-            .NotEmpty().WithMessage("La contraseña es requerida.");
+            .NotEmpty().WithMessage("La contraseÃ±a es requerida.");
     }
 }

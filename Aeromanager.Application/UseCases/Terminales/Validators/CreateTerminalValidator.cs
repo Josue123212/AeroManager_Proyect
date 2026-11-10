@@ -8,8 +8,8 @@ public class CreateTerminalValidator : AbstractValidator<CreateTerminalCommand>
     public CreateTerminalValidator()
     {
         RuleFor(x => x.Codigo)
-            .NotEmpty().WithMessage("El código de la terminal es requerido.")
-            .MaximumLength(10).WithMessage("El código no debe superar 10 caracteres.");
+            .NotEmpty().WithMessage("El cÃ³digo de la terminal es requerido.")
+            .MaximumLength(10).WithMessage("El cÃ³digo no debe superar 10 caracteres.");
 
         RuleFor(x => x.Nombre)
             .NotEmpty().WithMessage("El nombre de la terminal es requerido.")

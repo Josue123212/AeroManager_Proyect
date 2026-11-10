@@ -12,8 +12,8 @@ public class CreateAeropuertoValidator : AbstractValidator<CreateAeropuertoComma
             .MaximumLength(150).WithMessage("El nombre no debe superar 150 caracteres.");
 
         RuleFor(x => x.CodigoIata)
-            .NotEmpty().WithMessage("El código IATA es requerido.")
-            .Length(3).WithMessage("El código IATA debe tener exactamente 3 caracteres.");
+            .NotEmpty().WithMessage("El cÃ³digo IATA es requerido.")
+            .Length(3).WithMessage("El cÃ³digo IATA debe tener exactamente 3 caracteres.");
 
         RuleFor(x => x.CiudadId).GreaterThan(0).WithMessage("El CiudadId debe ser mayor a cero.");
     }

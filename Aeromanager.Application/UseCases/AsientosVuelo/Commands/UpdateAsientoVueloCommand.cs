@@ -26,7 +26,7 @@ public class UpdateAsientoVueloCommandHandler
 
     public async Task<AsientoVueloDto?> Handle(UpdateAsientoVueloCommand command, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(command.Id, cancellationToken);
+        var entity = await _repository.GetByIdAsync(command.Id);
         if (entity == null) return null;
 
         entity.VueloId = command.VueloId;
@@ -37,7 +37,7 @@ public class UpdateAsientoVueloCommandHandler
         entity.Activo = command.Activo;
 
         _repository.Update(entity);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         return new AsientoVueloDto(
             entity.Id,

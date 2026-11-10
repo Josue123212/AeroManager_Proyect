@@ -17,7 +17,7 @@ public class GetUsuariosQueryHandler
 
     public async Task<IEnumerable<UsuarioDto>> Handle(GetUsuariosQuery query, CancellationToken cancellationToken = default)
     {
-        var entities = await _repository.GetAllAsync(cancellationToken);
+        var entities = await _repository.GetAllAsync();
         return entities.Select(e => new UsuarioDto(
             e.Id,
             e.NombreCompleto,
@@ -30,7 +30,7 @@ public class GetUsuariosQueryHandler
 
     public async Task<UsuarioDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id, cancellationToken);
+        var entity = await _repository.GetByIdAsync(id);
         if (entity == null) return null;
 
         return new UsuarioDto(

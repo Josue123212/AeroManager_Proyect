@@ -16,9 +16,9 @@ public class CreateModeloAvionValidator : AbstractValidator<CreateModeloAvionCom
             .MaximumLength(100).WithMessage("El nombre del modelo no debe superar 100 caracteres.");
 
         RuleFor(x => x.CapacidadTeorica)
-            .GreaterThan(0).WithMessage("La capacidad teórica debe ser mayor a cero.");
+            .GreaterThan(0).WithMessage("La capacidad teÃ³rica debe ser mayor a cero.");
 
         RuleFor(x => x.AutonomiaKm)
-            .GreaterThan(0).WithMessage("La autonomía en Km debe ser mayor a cero.");
+            .GreaterThan(0).WithMessage("La autonomÃ­a en Km debe ser mayor a cero.");
     }
 }

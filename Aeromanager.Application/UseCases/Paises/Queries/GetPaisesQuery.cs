@@ -17,7 +17,7 @@ public class GetPaisesQueryHandler
 
     public async Task<IEnumerable<PaisDto>> Handle(GetPaisesQuery query, CancellationToken cancellationToken = default)
     {
-        var entities = await _repository.GetAllAsync(cancellationToken);
+        var entities = await _repository.GetAllAsync();
         return entities.Select(e => new PaisDto(
             e.Id,
             e.Nombre,
@@ -29,7 +29,7 @@ public class GetPaisesQueryHandler
 
     public async Task<PaisDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id, cancellationToken);
+        var entity = await _repository.GetByIdAsync(id);
         if (entity == null) return null;
 
         return new PaisDto(

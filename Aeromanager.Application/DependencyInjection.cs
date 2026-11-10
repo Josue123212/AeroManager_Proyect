@@ -110,6 +110,16 @@ public static class DependencyInjection
         services.AddScoped<UseCases.DetallesReserva.Commands.UpdateDetalleReservaCommandHandler>();
         services.AddScoped<UseCases.DetallesReserva.Queries.GetDetallesReservaQueryHandler>();
 
+        // Servicios de Reglas de Dominio (Aeromanager.Domain.Services)
+        services.AddScoped<Aeromanager.Domain.Services.RutaDomainService>();
+        services.AddScoped<Aeromanager.Domain.Services.VueloDomainService>();
+        services.AddScoped<Aeromanager.Domain.Services.ReservaDomainService>();
+
+        // Auth, Reportes Excel e Inteligencia Artificial
+        services.AddScoped<UseCases.Auth.Commands.LoginCommandHandler>();
+        services.AddScoped<UseCases.Reportes.Queries.GenerarReportesExcelQueryHandler>();
+        services.AddScoped<UseCases.AiAssistant.Commands.AskAiAssistantCommandHandler>();
+
         return services;
     }
 }

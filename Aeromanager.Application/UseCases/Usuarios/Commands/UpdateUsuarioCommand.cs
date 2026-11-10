@@ -25,7 +25,7 @@ public class UpdateUsuarioCommandHandler
 
     public async Task<UsuarioDto?> Handle(UpdateUsuarioCommand command, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(command.Id, cancellationToken);
+        var entity = await _repository.GetByIdAsync(command.Id);
         if (entity == null) return null;
 
         entity.NombreCompleto = command.NombreCompleto;
@@ -34,7 +34,7 @@ public class UpdateUsuarioCommandHandler
         entity.Activo = command.Activo;
 
         _repository.Update(entity);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         return new UsuarioDto(
             entity.Id,

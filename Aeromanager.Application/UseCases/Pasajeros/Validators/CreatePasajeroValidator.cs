@@ -18,12 +18,12 @@ public class CreatePasajeroValidator : AbstractValidator<CreatePasajeroCommand>
         RuleFor(x => x.TipoDocumentoId).GreaterThan(0).WithMessage("El TipoDocumentoId es requerido.");
 
         RuleFor(x => x.NumeroDocumento)
-            .NotEmpty().WithMessage("El número de documento es requerido.")
-            .MaximumLength(30).WithMessage("El número de documento no debe superar 30 caracteres.");
+            .NotEmpty().WithMessage("El nÃºmero de documento es requerido.")
+            .MaximumLength(30).WithMessage("El nÃºmero de documento no debe superar 30 caracteres.");
 
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("El email es requerido.")
-            .EmailAddress().WithMessage("El email no tiene un formato válido.")
+            .EmailAddress().WithMessage("El email no tiene un formato vÃ¡lido.")
             .MaximumLength(150).WithMessage("El email no debe superar 150 caracteres.");
 
         RuleFor(x => x.NacionalidadPaisId).GreaterThan(0).WithMessage("La nacionalidad es requerida.");

@@ -27,7 +27,7 @@ public class UpdateReservaCommandHandler
 
     public async Task<ReservaDto?> Handle(UpdateReservaCommand command, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(command.Id, cancellationToken);
+        var entity = await _repository.GetByIdAsync(command.Id);
         if (entity == null) return null;
 
         entity.CodigoTicket = command.CodigoTicket.ToUpperInvariant();
@@ -38,7 +38,7 @@ public class UpdateReservaCommandHandler
         entity.Activo = command.Activo;
 
         _repository.Update(entity);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync();
 
         return new ReservaDto(
             entity.Id,

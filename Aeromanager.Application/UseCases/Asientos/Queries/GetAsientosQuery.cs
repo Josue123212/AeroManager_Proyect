@@ -17,7 +17,7 @@ public class GetAsientosQueryHandler
 
     public async Task<IEnumerable<AsientoDto>> Handle(GetAsientosQuery query, CancellationToken cancellationToken = default)
     {
-        var entities = await _repository.GetAllAsync(cancellationToken);
+        var entities = await _repository.GetAllAsync();
         return entities.Select(e => new AsientoDto(
             e.Id,
             e.Fila,
@@ -31,7 +31,7 @@ public class GetAsientosQueryHandler
 
     public async Task<AsientoDto?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        var entity = await _repository.GetByIdAsync(id, cancellationToken);
+        var entity = await _repository.GetByIdAsync(id);
         if (entity == null) return null;
 
         return new AsientoDto(

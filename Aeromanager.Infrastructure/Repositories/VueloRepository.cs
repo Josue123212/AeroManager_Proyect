@@ -5,15 +5,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Aeromanager.Infrastructure.Repositories;
 
-public class VueloRepository : GenericRepository<Vuelo>, IVueloRepository
+public class VueloRepository(AeroManagerDbContext context) : GenericRepository<Vuelo>(context), IVueloRepository
 {
-    public VueloRepository(AeroManagerDbContext context) : base(context)
-    {
-    }
-
     public async Task<IEnumerable<Vuelo>> GetVuelosProgramadosPorFechaAsync(DateTime fecha, CancellationToken cancellationToken = default)
     {
         return await _dbSet
+            .AsNoTracking()
             .Where(v => v.FechaHoraSalida.Date == fecha.Date)
             .ToListAsync(cancellationToken);
     }

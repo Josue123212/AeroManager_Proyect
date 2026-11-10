@@ -17,6 +17,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Aeromanager.Domain\Aeromanager.Domain.csproj" />
+        <ProjectReference Include="..\Aeromanager.Application\Aeromanager.Application.csproj" />
     </ItemGroup>
 
 </Project>

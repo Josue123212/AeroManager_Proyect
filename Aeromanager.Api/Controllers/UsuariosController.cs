@@ -1,3 +1,4 @@
+
 using Aeromanager.Application.DTOs;
 using Aeromanager.Application.UseCases.Usuarios.Commands;
 using Aeromanager.Application.UseCases.Usuarios.Queries;
@@ -17,16 +18,16 @@ public class UsuariosController(
     IValidator<CreateUsuarioCommand> createValidator) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<UsuarioDto>>> GetAll(CancellationToken cancellationToken)
+    public async Task<ActionResult<IEnumerable<UsuarioDto>>> GetAll()
     {
-        var items = await queryHandler.Handle(new GetUsuariosQuery(), cancellationToken);
+        var items = await queryHandler.Handle(new GetUsuariosQuery());
         return Ok(items);
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<UsuarioDto>> GetById(int id, CancellationToken cancellationToken)
+    public async Task<ActionResult<UsuarioDto>> GetById(int id)
     {
-        var item = await queryHandler.GetByIdAsync(id, cancellationToken);
+        var item = await queryHandler.GetByIdAsync(id);
         if (item is null)
         {
             return NotFound();
@@ -37,11 +38,11 @@ public class UsuariosController(
 
     [HttpPost]
     public async Task<ActionResult<UsuarioDto>> Create(
-        CreateUsuarioRequest request, CancellationToken cancellationToken)
+        CreateUsuarioRequest request)
     {
         var hash = new PasswordHasher<CreateUsuarioRequest>().HashPassword(request, request.Password);
         var command = new CreateUsuarioCommand(request.NombreCompleto, request.Email, hash, request.EstadoAcceso);
-        var validation = await createValidator.ValidateAsync(command, cancellationToken);
+        var validation = await createValidator.ValidateAsync(command);
         if (!validation.IsValid)
         {
             foreach (var error in validation.Errors)
@@ -52,15 +53,15 @@ public class UsuariosController(
             return ValidationProblem(ModelState);
         }
 
-        var item = await createHandler.Handle(command, cancellationToken);
+        var item = await createHandler.Handle(command);
         return CreatedAtAction(nameof(GetById), new { id = item.Id }, item);
     }
 
     [HttpPut("{id:int}")]
     public async Task<ActionResult<UsuarioDto>> Update(
-        int id, UpdateUsuarioCommand command, CancellationToken cancellationToken)
+        int id, UpdateUsuarioCommand command)
     {
-        var item = await updateHandler.Handle(command with { Id = id }, cancellationToken);
+        var item = await updateHandler.Handle(command with { Id = id });
         if (item is null)
         {
             return NotFound();

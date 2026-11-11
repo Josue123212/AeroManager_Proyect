@@ -15,16 +15,16 @@ public class CiudadesController(
     IValidator<CreateCiudadCommand> createValidator) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<CiudadDto>>> GetAll(CancellationToken cancellationToken)
+    public async Task<ActionResult<IEnumerable<CiudadDto>>> GetAll()
     {
-        var items = await queryHandler.Handle(new GetCiudadesQuery(), cancellationToken);
+        var items = await queryHandler.Handle(new GetCiudadesQuery());
         return Ok(items);
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<CiudadDto>> GetById(int id, CancellationToken cancellationToken)
+    public async Task<ActionResult<CiudadDto>> GetById(int id)
     {
-        var item = await queryHandler.GetByIdAsync(id, cancellationToken);
+        var item = await queryHandler.GetByIdAsync(id);
         if (item is null)
         {
             return NotFound();
@@ -34,10 +34,9 @@ public class CiudadesController(
     }
 
     [HttpPost]
-    public async Task<ActionResult<CiudadDto>> Create(
-        CreateCiudadCommand command, CancellationToken cancellationToken)
+    public async Task<ActionResult<CiudadDto>> Create(CreateCiudadCommand command)
     {
-        var validation = await createValidator.ValidateAsync(command, cancellationToken);
+        var validation = await createValidator.ValidateAsync(command);
         if (!validation.IsValid)
         {
             foreach (var error in validation.Errors)
@@ -48,15 +47,14 @@ public class CiudadesController(
             return ValidationProblem(ModelState);
         }
 
-        var item = await createHandler.Handle(command, cancellationToken);
+        var item = await createHandler.Handle(command);
         return CreatedAtAction(nameof(GetById), new { id = item.Id }, item);
     }
 
     [HttpPut("{id:int}")]
-    public async Task<ActionResult<CiudadDto>> Update(
-        int id, UpdateCiudadCommand command, CancellationToken cancellationToken)
+    public async Task<ActionResult<CiudadDto>> Update(int id, UpdateCiudadCommand command)
     {
-        var item = await updateHandler.Handle(command with { Id = id }, cancellationToken);
+        var item = await updateHandler.Handle(command with { Id = id });
         if (item is null)
         {
             return NotFound();

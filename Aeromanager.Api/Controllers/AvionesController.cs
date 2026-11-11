@@ -15,16 +15,16 @@ public class AvionesController(
     IValidator<CreateAvionCommand> createValidator) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<AvionDto>>> GetAll(CancellationToken cancellationToken)
+    public async Task<ActionResult<IEnumerable<AvionDto>>> GetAll()
     {
-        var items = await queryHandler.Handle(new GetAvionesQuery(), cancellationToken);
+        var items = await queryHandler.Handle(new GetAvionesQuery());
         return Ok(items);
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<AvionDto>> GetById(int id, CancellationToken cancellationToken)
+    public async Task<ActionResult<AvionDto>> GetById(int id)
     {
-        var item = await queryHandler.GetByIdAsync(id, cancellationToken);
+        var item = await queryHandler.GetByIdAsync(id);
         if (item is null)
         {
             return NotFound();
@@ -35,9 +35,9 @@ public class AvionesController(
 
     [HttpPost]
     public async Task<ActionResult<AvionDto>> Create(
-        CreateAvionCommand command, CancellationToken cancellationToken)
+        CreateAvionCommand command)
     {
-        var validation = await createValidator.ValidateAsync(command, cancellationToken);
+        var validation = await createValidator.ValidateAsync(command);
         if (!validation.IsValid)
         {
             foreach (var error in validation.Errors)
@@ -48,15 +48,15 @@ public class AvionesController(
             return ValidationProblem(ModelState);
         }
 
-        var item = await createHandler.Handle(command, cancellationToken);
+        var item = await createHandler.Handle(command);
         return CreatedAtAction(nameof(GetById), new { id = item.Id }, item);
     }
 
     [HttpPut("{id:int}")]
     public async Task<ActionResult<AvionDto>> Update(
-        int id, UpdateAvionCommand command, CancellationToken cancellationToken)
+        int id, UpdateAvionCommand command)
     {
-        var item = await updateHandler.Handle(command with { Id = id }, cancellationToken);
+        var item = await updateHandler.Handle(command with { Id = id });
         if (item is null)
         {
             return NotFound();

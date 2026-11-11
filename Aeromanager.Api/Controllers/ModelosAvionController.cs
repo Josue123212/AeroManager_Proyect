@@ -15,16 +15,16 @@ public class ModelosAvionController(
     IValidator<CreateModeloAvionCommand> createValidator) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<ModeloAvionDto>>> GetAll(CancellationToken cancellationToken)
+    public async Task<ActionResult<IEnumerable<ModeloAvionDto>>> GetAll()
     {
-        var items = await queryHandler.Handle(new GetModelosAvionQuery(), cancellationToken);
+        var items = await queryHandler.Handle(new GetModelosAvionQuery());
         return Ok(items);
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<ModeloAvionDto>> GetById(int id, CancellationToken cancellationToken)
+    public async Task<ActionResult<ModeloAvionDto>> GetById(int id)
     {
-        var item = await queryHandler.GetByIdAsync(id, cancellationToken);
+        var item = await queryHandler.GetByIdAsync(id);
         if (item is null)
         {
             return NotFound();
@@ -35,9 +35,9 @@ public class ModelosAvionController(
 
     [HttpPost]
     public async Task<ActionResult<ModeloAvionDto>> Create(
-        CreateModeloAvionCommand command, CancellationToken cancellationToken)
+        CreateModeloAvionCommand command)
     {
-        var validation = await createValidator.ValidateAsync(command, cancellationToken);
+        var validation = await createValidator.ValidateAsync(command);
         if (!validation.IsValid)
         {
             foreach (var error in validation.Errors)
@@ -48,15 +48,15 @@ public class ModelosAvionController(
             return ValidationProblem(ModelState);
         }
 
-        var item = await createHandler.Handle(command, cancellationToken);
+        var item = await createHandler.Handle(command);
         return CreatedAtAction(nameof(GetById), new { id = item.Id }, item);
     }
 
     [HttpPut("{id:int}")]
     public async Task<ActionResult<ModeloAvionDto>> Update(
-        int id, UpdateModeloAvionCommand command, CancellationToken cancellationToken)
+        int id, UpdateModeloAvionCommand command)
     {
-        var item = await updateHandler.Handle(command with { Id = id }, cancellationToken);
+        var item = await updateHandler.Handle(command with { Id = id });
         if (item is null)
         {
             return NotFound();

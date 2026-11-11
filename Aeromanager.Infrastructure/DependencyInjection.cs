@@ -1,6 +1,8 @@
+using Aeromanager.Application.Interfaces;
 using Aeromanager.Domain.Ports;
 using Aeromanager.Infrastructure.Persistence;
 using Aeromanager.Infrastructure.Repositories;
+using Aeromanager.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,16 +13,19 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration? configuration = null)
     {
-        var connectionString = configuration?.GetConnectionString("DefaultConnection")
-            ?? configuration?.GetConnectionString("AeroManagerConnection")
-            ?? Environment.GetEnvironmentVariable("AEROMANAGER_CONNECTION_STRING");
-
-        if (!string.IsNullOrWhiteSpace(connectionString))
+        if (configuration != null)
         {
-            services.AddDbContext<AeroManagerDbContext>(options =>
-                options.UseNpgsql(connectionString));
+            var connectionString = configuration.GetConnectionString("DefaultConnection")
+                                   ?? configuration.GetConnectionString("AeroManagerConnection");
+
+            if (!string.IsNullOrWhiteSpace(connectionString))
+            {
+                services.AddDbContext<AeroManagerDbContext>(options =>
+                    options.UseNpgsql(connectionString));
+            }
         }
 
+        // Adaptadores Primarios (Repositorios -> Interfaces en Domain.Ports)
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IAeropuertoRepository, AeropuertoRepository>();
@@ -31,6 +36,12 @@ public static class DependencyInjection
         services.AddScoped<IReservaRepository, ReservaRepository>();
         services.AddScoped<IPasajeroRepository, PasajeroRepository>();
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+
+        // Adaptadores Secundarios (Servicios Técnicos/Externos -> Interfaces en Application.Interfaces)
+        services.AddScoped<IPasswordHasher, PasswordHasher>();
+        services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<IExcelReportService, ExcelReportService>();
+        services.AddHttpClient<IAiAssistantService, GeminiAiService>();
 
         return services;
     }

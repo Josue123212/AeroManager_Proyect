@@ -11,12 +11,14 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="Microsoft.Extensions.Http" Version="11.0.0" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.14" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\Aeromanager.Domain\Aeromanager.Domain.csproj" />
+        <ProjectReference Include="..\Aeromanager.Application\Aeromanager.Application.csproj" />
     </ItemGroup>
 
 </Project>

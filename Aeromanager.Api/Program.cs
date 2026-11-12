@@ -1,21 +1,37 @@
 using Aeromanager.Application;
 using Aeromanager.Infrastructure;
-using Aeromanager.Api.Middleware;
+using Aeromanager.Api.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Registrar controladores
 builder.Services.AddControllers();
+
+// Registrar las capas del proyecto
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+// Configurar OpenAPI
 builder.Services.AddOpenApi();
+
+// Configurar CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 var app = builder.Build();
 
+// Registrar los dos middlewares nuevos
+app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
+// Configurar Swagger
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -24,7 +40,14 @@ if (app.Environment.IsDevelopment())
         options.DocumentPath = "/openapi/v1.json";
     });
 }
+
+// Configurar peticiones HTTP
 app.UseHttpsRedirection();
+
+// Habilitar CORS
+app.UseCors("AllowFrontend");
+
+// Mapear controladores
 app.MapControllers();
 
 app.Run();

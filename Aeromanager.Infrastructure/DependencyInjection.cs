@@ -9,29 +9,28 @@ namespace Aeromanager.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration? configuration = null)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
+        var connectionString = configuration?.GetConnectionString("DefaultConnection")
+            ?? configuration?.GetConnectionString("AeroManagerConnection")
             ?? Environment.GetEnvironmentVariable("AEROMANAGER_CONNECTION_STRING");
 
-        if (string.IsNullOrWhiteSpace(connectionString))
+        if (!string.IsNullOrWhiteSpace(connectionString))
         {
-            return services;
+            services.AddDbContext<AeroManagerDbContext>(options =>
+                options.UseNpgsql(connectionString));
         }
 
-        services.AddDbContext<AeroManagerDbContext>(options =>
-            options.UseNpgsql(connectionString));
-
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IAeropuertoRepository, AeropuertoRepository>();
-        services.AddScoped<IAsientoVueloRepository, AsientoVueloRepository>();
         services.AddScoped<IAvionRepository, AvionRepository>();
-        services.AddScoped<IPasajeroRepository, PasajeroRepository>();
-        services.AddScoped<IReservaRepository, ReservaRepository>();
         services.AddScoped<IRutaRepository, RutaRepository>();
-        services.AddScoped<IUsuarioRepository, UsuarioRepository>();
         services.AddScoped<IVueloRepository, VueloRepository>();
+        services.AddScoped<IAsientoVueloRepository, AsientoVueloRepository>();
+        services.AddScoped<IReservaRepository, ReservaRepository>();
+        services.AddScoped<IPasajeroRepository, PasajeroRepository>();
+        services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 
         return services;
     }

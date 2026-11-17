@@ -481,3 +481,9 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 *.md
+
+# Stitch UI design exports
+stitch_aeromanager_admin_dashboard/
+stitch_aeromanager_operator_dashboard/
+stitch_aeromanager__counter_dashboard/
+*stitch*/

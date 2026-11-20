@@ -487,3 +487,8 @@ stitch_aeromanager_admin_dashboard/
 stitch_aeromanager_operator_dashboard/
 stitch_aeromanager__counter_dashboard/
 *stitch*/
+
+# Vite / Frontend build artifacts
+.vite/
+dist/
+*.tsbuildinfo

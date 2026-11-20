@@ -30,8 +30,6 @@ import CarteleraVuelosCounterPage from './pages/counter/CarteleraVuelosCounterPa
 import PadronPasajerosCounterPage from './pages/counter/PadronPasajerosCounterPage';
 import MapaCabinaReservaPage from './pages/counter/MapaCabinaReservaPage';
 import HistorialTicketsCounterPage from './pages/counter/HistorialTicketsCounterPage';
-import MapaCabinaReservaPage from './pages/counter/MapaCabinaReservaPage';
-import HistorialTicketsCounterPage from './pages/counter/HistorialTicketsCounterPage';
 
 export default function App() {
   return (

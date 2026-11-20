@@ -35,15 +35,23 @@ export default function RolesPermisosPage() {
     loadData();
   }, []);
 
+  const assignableRoles = roles.filter(
+    (r) => !r.nombre.toLowerCase().includes('admin')
+  );
+
   const openModal = () => {
     setUsuarioId(usuarios[0]?.id || 0);
-    setRolId(roles[0]?.id || 0);
+    setRolId(assignableRoles[0]?.id || 0);
     setShowAssignModal(true);
   };
 
   const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    if (!rolId) {
+      setErrorMsg('Seleccione un rol operativo válido.');
+      return;
+    }
     try {
       await axiosClient.post('/usuarioroles', { usuarioId, rolId });
       setShowAssignModal(false);
@@ -202,12 +210,15 @@ export default function RolesPermisosPage() {
                   onChange={(e) => setRolId(Number(e.target.value))}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                 >
-                  {roles.map((r) => (
+                  {assignableRoles.map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.nombre}
                     </option>
                   ))}
                 </select>
+                <p className="text-[11px] text-zinc-500 mt-1">
+                  Solo se pueden asignar roles operativos (Operador o Counter).
+                </p>
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t border-zinc-200">
                 <button

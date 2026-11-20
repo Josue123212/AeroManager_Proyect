@@ -15,16 +15,16 @@ public class RutasController(
     IValidator<CreateRutaCommand> createValidator) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<RutaDto>>> GetAll(CancellationToken cancellationToken)
+    public async Task<ActionResult<IEnumerable<RutaDto>>> GetAll()
     {
-        var items = await queryHandler.Handle(new GetRutasQuery(), cancellationToken);
+        var items = await queryHandler.Handle(new GetRutasQuery());
         return Ok(items);
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<RutaDto>> GetById(int id, CancellationToken cancellationToken)
+    public async Task<ActionResult<RutaDto>> GetById(int id)
     {
-        var item = await queryHandler.GetByIdAsync(id, cancellationToken);
+        var item = await queryHandler.GetByIdAsync(id);
         if (item is null)
         {
             return NotFound();
@@ -35,9 +35,9 @@ public class RutasController(
 
     [HttpPost]
     public async Task<ActionResult<RutaDto>> Create(
-        CreateRutaCommand command, CancellationToken cancellationToken)
+        CreateRutaCommand command)
     {
-        var validation = await createValidator.ValidateAsync(command, cancellationToken);
+        var validation = await createValidator.ValidateAsync(command);
         if (!validation.IsValid)
         {
             foreach (var error in validation.Errors)
@@ -48,15 +48,15 @@ public class RutasController(
             return ValidationProblem(ModelState);
         }
 
-        var item = await createHandler.Handle(command, cancellationToken);
+        var item = await createHandler.Handle(command);
         return CreatedAtAction(nameof(GetById), new { id = item.Id }, item);
     }
 
     [HttpPut("{id:int}")]
     public async Task<ActionResult<RutaDto>> Update(
-        int id, UpdateRutaCommand command, CancellationToken cancellationToken)
+        int id, UpdateRutaCommand command)
     {
-        var item = await updateHandler.Handle(command with { Id = id }, cancellationToken);
+        var item = await updateHandler.Handle(command with { Id = id });
         if (item is null)
         {
             return NotFound();

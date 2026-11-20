@@ -1,3 +1,4 @@
+
 using Aeromanager.Application.DTOs;
 using Aeromanager.Application.UseCases.Paises.Commands;
 using Aeromanager.Application.UseCases.Paises.Queries;
@@ -15,16 +16,16 @@ public class PaisesController(
     IValidator<CreatePaisCommand> createValidator) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<PaisDto>>> GetAll(CancellationToken cancellationToken)
+    public async Task<ActionResult<IEnumerable<PaisDto>>> GetAll()
     {
-        var items = await queryHandler.Handle(new GetPaisesQuery(), cancellationToken);
+        var items = await queryHandler.Handle(new GetPaisesQuery());
         return Ok(items);
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<PaisDto>> GetById(int id, CancellationToken cancellationToken)
+    public async Task<ActionResult<PaisDto>> GetById(int id)
     {
-        var item = await queryHandler.GetByIdAsync(id, cancellationToken);
+        var item = await queryHandler.GetByIdAsync(id);
         if (item is null)
         {
             return NotFound();
@@ -35,9 +36,9 @@ public class PaisesController(
 
     [HttpPost]
     public async Task<ActionResult<PaisDto>> Create(
-        CreatePaisCommand command, CancellationToken cancellationToken)
+        CreatePaisCommand command)
     {
-        var validation = await createValidator.ValidateAsync(command, cancellationToken);
+        var validation = await createValidator.ValidateAsync(command);
         if (!validation.IsValid)
         {
             foreach (var error in validation.Errors)
@@ -48,15 +49,15 @@ public class PaisesController(
             return ValidationProblem(ModelState);
         }
 
-        var item = await createHandler.Handle(command, cancellationToken);
+        var item = await createHandler.Handle(command);
         return CreatedAtAction(nameof(GetById), new { id = item.Id }, item);
     }
 
     [HttpPut("{id:int}")]
     public async Task<ActionResult<PaisDto>> Update(
-        int id, UpdatePaisCommand command, CancellationToken cancellationToken)
+        int id, UpdatePaisCommand command)
     {
-        var item = await updateHandler.Handle(command with { Id = id }, cancellationToken);
+        var item = await updateHandler.Handle(command with { Id = id });
         if (item is null)
         {
             return NotFound();
@@ -65,3 +66,4 @@ public class PaisesController(
         return Ok(item);
     }
 }
+

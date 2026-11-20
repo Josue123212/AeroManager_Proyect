@@ -6,11 +6,15 @@ export default function RolesPermisosPage() {
   const [roles, setRoles] = useState<RolDto[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioDto[]>([]);
   const [asignaciones, setAsignaciones] = useState<UsuarioRolDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
-  const [usuarioId, setUsuarioId] = useState<number>(1);
-  const [rolId, setRolId] = useState<number>(1);
+  const [usuarioId, setUsuarioId] = useState<number>(0);
+  const [rolId, setRolId] = useState<number>(0);
 
   const loadData = async () => {
+    setLoading(true);
+    setErrorMsg(null);
     try {
       const [rRes, uRes, urRes] = await Promise.all([
         axiosClient.get<RolDto[]>('/roles'),
@@ -20,22 +24,10 @@ export default function RolesPermisosPage() {
       setRoles(rRes.data);
       setUsuarios(uRes.data);
       setAsignaciones(urRes.data);
-    } catch {
-      setRoles([
-        { id: 1, nombre: 'Administrador', descripcion: 'Control total de catálogos, infraestructura, flota, reportes Excel e IA.', activo: true },
-        { id: 2, nombre: 'Operador', descripcion: 'Gestión de rutas aéreas, programación FIDS de vuelos, gates y cabina.', activo: true },
-        { id: 3, nombre: 'Counter', descripcion: 'Registro de pasajeros, mapa de asientos en tiempo real y emisión de tickets.', activo: true }
-      ]);
-      setUsuarios([
-        { id: 1, nombreCompleto: 'Josué Choque', email: 'admin@aeromanager.com', fechaCreacion: '2026-11-01T09:00:00Z', activo: true },
-        { id: 2, nombreCompleto: 'Carlos Mendoza', email: 'operador@aeromanager.com', fechaCreacion: '2026-11-02T10:30:00Z', activo: true },
-        { id: 3, nombreCompleto: 'Lucía Fernández', email: 'counter@aeromanager.com', fechaCreacion: '2026-11-03T11:15:00Z', activo: true }
-      ]);
-      setAsignaciones([
-        { id: 1, usuarioId: 1, rolId: 1, fechaAsignacion: '2026-11-01T09:05:00Z', activo: true },
-        { id: 2, usuarioId: 2, rolId: 2, fechaAsignacion: '2026-11-02T10:35:00Z', activo: true },
-        { id: 3, usuarioId: 3, rolId: 3, fechaAsignacion: '2026-11-03T11:20:00Z', activo: true }
-      ]);
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/usuarioroles.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -43,25 +35,22 @@ export default function RolesPermisosPage() {
     loadData();
   }, []);
 
+  const openModal = () => {
+    setUsuarioId(usuarios[0]?.id || 0);
+    setRolId(roles[0]?.id || 0);
+    setShowAssignModal(true);
+  };
+
   const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
     try {
       await axiosClient.post('/usuarioroles', { usuarioId, rolId });
+      setShowAssignModal(false);
       await loadData();
-    } catch {
-      const nextId = asignaciones.length ? Math.max(...asignaciones.map((a) => a.id)) + 1 : 1;
-      setAsignaciones((prev) => [
-        ...prev,
-        {
-          id: nextId,
-          usuarioId,
-          rolId,
-          fechaAsignacion: new Date().toISOString(),
-          activo: true
-        }
-      ]);
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al asignar rol a usuario en la BD.');
     }
-    setShowAssignModal(false);
   };
 
   return (
@@ -73,12 +62,12 @@ export default function RolesPermisosPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Roles y Permisos (UsuarioRol)</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Definición de los 3 perfiles operativos del sistema y asignación directa a cuentas de usuario.
+            Registros en vivo desde las tablas Rol y UsuarioRol en Neon Cloud PostgreSQL (`GET /api/roles`, `GET /api/usuarioroles`).
           </p>
         </div>
         <button
           type="button"
-          onClick={() => setShowAssignModal(true)}
+          onClick={openModal}
           className="h-9 px-4 rounded bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer"
         >
           <span className="material-symbols-outlined text-[18px]">verified_user</span>
@@ -86,7 +75,13 @@ export default function RolesPermisosPage() {
         </button>
       </div>
 
-      {/* Tarjetas de los 3 Roles del Sistema */}
+      {errorMsg && (
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+          {errorMsg}
+        </div>
+      )}
+
+      {/* Tarjetas de Roles desde la tabla Rol */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {roles.map((r) => (
           <div
@@ -98,10 +93,12 @@ export default function RolesPermisosPage() {
                 <span className="font-mono-code text-xs font-bold px-2 py-0.5 rounded bg-sky-50 border border-sky-200 text-[#0284C7]">
                   ROL #{r.id}
                 </span>
-                <span className="text-[11px] font-semibold text-emerald-700">Activo</span>
+                <span className="text-[11px] font-semibold text-emerald-700">
+                  {r.activo ? 'Activo' : 'Inactivo'}
+                </span>
               </div>
               <h3 className="text-base font-bold text-[#18181B] mt-2">{r.nombre}</h3>
-              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{r.descripcion}</p>
+              <p className="text-xs text-zinc-500 mt-1 leading-relaxed">{r.descripcion || '—'}</p>
             </div>
           </div>
         ))}
@@ -125,31 +122,41 @@ export default function RolesPermisosPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 text-xs">
-            {asignaciones.map((item) => {
-              const u = usuarios.find((x) => x.id === item.usuarioId);
-              const r = roles.find((x) => x.id === item.rolId);
-              return (
-                <tr key={item.id} className="hover:bg-zinc-50">
-                  <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
-                  <td className="py-3 px-4 font-semibold text-[#18181B]">
-                    {u ? `${u.nombreCompleto} (${u.email})` : `Usuario #${item.usuarioId}`}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="font-mono-code font-bold px-2.5 py-0.5 rounded bg-sky-50 border border-sky-200 text-[#0284C7]">
-                      {r ? r.nombre : `Rol #${item.rolId}`}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 font-mono-code text-zinc-600">
-                    {new Date(item.fechaAsignacion).toLocaleString('es-PE')}
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <span className="inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold bg-emerald-50 border-emerald-200 text-emerald-700">
-                      Vigente
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
+            {asignaciones.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="py-8 text-center text-zinc-500">
+                  {loading
+                    ? 'Consultando GET /api/usuarioroles...'
+                    : 'No hay asignaciones UsuarioRol registradas en la base de datos.'}
+                </td>
+              </tr>
+            ) : (
+              asignaciones.map((item) => {
+                const u = usuarios.find((x) => x.id === item.usuarioId);
+                const r = roles.find((x) => x.id === item.rolId);
+                return (
+                  <tr key={item.id} className="hover:bg-zinc-50">
+                    <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
+                    <td className="py-3 px-4 font-semibold text-[#18181B]">
+                      {u ? `${u.nombreCompleto} (${u.email})` : `Usuario #${item.usuarioId}`}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="font-mono-code font-bold px-2.5 py-0.5 rounded bg-sky-50 border border-sky-200 text-[#0284C7]">
+                        {r ? r.nombre : `Rol #${item.rolId}`}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 font-mono-code text-zinc-600">
+                      {new Date(item.fechaAsignacion).toLocaleString('es-PE')}
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <span className="inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold bg-emerald-50 border-emerald-200 text-emerald-700">
+                        {item.activo ? 'Vigente' : 'Inactivo'}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
@@ -173,6 +180,7 @@ export default function RolesPermisosPage() {
                   Seleccionar Usuario
                 </label>
                 <select
+                  required
                   value={usuarioId}
                   onChange={(e) => setUsuarioId(Number(e.target.value))}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
@@ -189,6 +197,7 @@ export default function RolesPermisosPage() {
                   Seleccionar Rol Operativo
                 </label>
                 <select
+                  required
                   value={rolId}
                   onChange={(e) => setRolId(Number(e.target.value))}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"

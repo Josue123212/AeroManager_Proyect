@@ -5,16 +5,20 @@ import { AeropuertoDto, CiudadDto } from '../../../types/models';
 export default function AeropuertosPage() {
   const [aeropuertos, setAeropuertos] = useState<AeropuertoDto[]>([]);
   const [ciudades, setCiudades] = useState<CiudadDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<AeropuertoDto | null>(null);
   const [nombre, setNombre] = useState('');
   const [codigoIata, setCodigoIata] = useState('');
-  const [ciudadId, setCiudadId] = useState<number>(1);
+  const [ciudadId, setCiudadId] = useState<number>(0);
   const [direccion, setDireccion] = useState('');
   const [activo, setActivo] = useState(true);
 
   const loadData = async () => {
+    setLoading(true);
+    setErrorMsg(null);
     try {
       const [aRes, cRes] = await Promise.all([
         axiosClient.get<AeropuertoDto[]>('/aeropuertos'),
@@ -22,21 +26,10 @@ export default function AeropuertosPage() {
       ]);
       setAeropuertos(aRes.data);
       setCiudades(cRes.data);
-    } catch {
-      setCiudades([
-        { id: 1, nombre: 'Lima', paisId: 1, activo: true },
-        { id: 2, nombre: 'Cusco', paisId: 1, activo: true },
-        { id: 3, nombre: 'Arequipa', paisId: 1, activo: true },
-        { id: 4, nombre: 'Bogotá', paisId: 2, activo: true },
-        { id: 5, nombre: 'Santiago', paisId: 3, activo: true }
-      ]);
-      setAeropuertos([
-        { id: 1, nombre: 'Aeropuerto Internacional Jorge Chávez', codigoIata: 'LIM', ciudadId: 1, direccion: 'Av. Elmer Faucett s/n, Callao', activo: true },
-        { id: 2, nombre: 'Aeropuerto Internacional Alejandro Velasco Astete', codigoIata: 'CUZ', ciudadId: 2, direccion: 'Av. Velasco Astete s/n, Cusco', activo: true },
-        { id: 3, nombre: 'Aeropuerto Internacional Rodríguez Ballón', codigoIata: 'AQP', ciudadId: 3, direccion: 'Av. Aviación Km 1, Cerro Colorado', activo: true },
-        { id: 4, nombre: 'Aeropuerto Internacional El Dorado', codigoIata: 'BOG', ciudadId: 4, direccion: 'Av. El Dorado #103-9, Bogotá', activo: true },
-        { id: 5, nombre: 'Aeropuerto Internacional Arturo Merino Benítez', codigoIata: 'SCL', ciudadId: 5, direccion: 'Armando Cortínez Oriente 1704, Pudahuel', activo: true }
-      ]);
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/aeropuertos.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,7 +41,7 @@ export default function AeropuertosPage() {
     setEditing(null);
     setNombre('');
     setCodigoIata('');
-    setCiudadId(ciudades[0]?.id || 1);
+    setCiudadId(ciudades[0]?.id || 0);
     setDireccion('');
     setActivo(true);
     setShowModal(true);
@@ -66,6 +59,7 @@ export default function AeropuertosPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
     const iata = codigoIata.trim().toUpperCase().slice(0, 3);
     try {
       if (editing) {
@@ -85,25 +79,11 @@ export default function AeropuertosPage() {
           direccion
         });
       }
+      setShowModal(false);
       await loadData();
-    } catch {
-      if (editing) {
-        setAeropuertos((prev) =>
-          prev.map((a) =>
-            a.id === editing.id
-              ? { ...a, nombre, codigoIata: iata, ciudadId, direccion, activo }
-              : a
-          )
-        );
-      } else {
-        const nextId = aeropuertos.length ? Math.max(...aeropuertos.map((a) => a.id)) + 1 : 1;
-        setAeropuertos((prev) => [
-          ...prev,
-          { id: nextId, nombre, codigoIata: iata, ciudadId, direccion, activo: true }
-        ]);
-      }
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al guardar aeropuerto en la BD.');
     }
-    setShowModal(false);
   };
 
   const getCiudadNombre = (id: number) =>
@@ -124,7 +104,7 @@ export default function AeropuertosPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Sedes Aeroportuarias IATA</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Administración central de hubs y aeropuertos habilitados para rutas comerciales.
+            Registros en vivo desde la tabla Aeropuerto en Neon Cloud PostgreSQL (`GET /api/aeropuertos`).
           </p>
         </div>
         <button
@@ -137,6 +117,12 @@ export default function AeropuertosPage() {
         </button>
       </div>
 
+      {errorMsg && (
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+          {errorMsg}
+        </div>
+      )}
+
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <div className="p-4 bg-[#F4F4F5] border-b border-zinc-200 flex items-center justify-between">
           <input
@@ -147,7 +133,7 @@ export default function AeropuertosPage() {
             className="w-full sm:w-80 h-9 px-3 rounded border border-zinc-300 bg-white text-xs outline-none focus:border-[#0284C7]"
           />
           <span className="font-mono-code text-xs text-zinc-600">
-            Sedes registradas: <strong>{filtered.length}</strong>
+            Sedes en BD: <strong>{filtered.length}</strong>
           </span>
         </div>
 
@@ -164,33 +150,43 @@ export default function AeropuertosPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 text-xs">
-            {filtered.map((item) => (
-              <tr key={item.id} className="hover:bg-zinc-50">
-                <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
-                <td className="py-3 px-4">
-                  <span className="font-mono-code font-bold px-2.5 py-0.5 rounded bg-sky-50 border border-sky-200 text-[#0284C7]">
-                    {item.codigoIata}
-                  </span>
-                </td>
-                <td className="py-3 px-4 font-semibold text-[#18181B]">{item.nombre}</td>
-                <td className="py-3 px-4 text-zinc-700">{getCiudadNombre(item.ciudadId)}</td>
-                <td className="py-3 px-4 text-zinc-500">{item.direccion || '—'}</td>
-                <td className="py-3 px-4">
-                  <span className="inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold bg-emerald-50 border-emerald-200 text-emerald-700">
-                    {item.activo ? 'Operativo' : 'Inactivo'}
-                  </span>
-                </td>
-                <td className="py-3 px-4 text-right">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(item)}
-                    className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
-                  >
-                    Editar
-                  </button>
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="py-8 text-center text-zinc-500">
+                  {loading
+                    ? 'Consultando GET /api/aeropuertos...'
+                    : 'No hay aeropuertos registrados en la base de datos.'}
                 </td>
               </tr>
-            ))}
+            ) : (
+              filtered.map((item) => (
+                <tr key={item.id} className="hover:bg-zinc-50">
+                  <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
+                  <td className="py-3 px-4">
+                    <span className="font-mono-code font-bold px-2.5 py-0.5 rounded bg-sky-50 border border-sky-200 text-[#0284C7]">
+                      {item.codigoIata}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 font-semibold text-[#18181B]">{item.nombre}</td>
+                  <td className="py-3 px-4 text-zinc-700">{getCiudadNombre(item.ciudadId)}</td>
+                  <td className="py-3 px-4 text-zinc-500">{item.direccion || '—'}</td>
+                  <td className="py-3 px-4">
+                    <span className="inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold bg-emerald-50 border-emerald-200 text-emerald-700">
+                      {item.activo ? 'Operativo' : 'Inactivo'}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(item)}
+                      className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
+                    >
+                      Editar
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -244,6 +240,7 @@ export default function AeropuertosPage() {
                     Ciudad Asignada
                   </label>
                   <select
+                    required
                     value={ciudadId}
                     onChange={(e) => setCiudadId(Number(e.target.value))}
                     className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"

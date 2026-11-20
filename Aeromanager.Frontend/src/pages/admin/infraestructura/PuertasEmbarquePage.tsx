@@ -5,14 +5,18 @@ import { PuertaEmbarqueDto, TerminalDto } from '../../../types/models';
 export default function PuertasEmbarquePage() {
   const [puertas, setPuertas] = useState<PuertaEmbarqueDto[]>([]);
   const [terminales, setTerminales] = useState<TerminalDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<PuertaEmbarqueDto | null>(null);
   const [codigoGate, setCodigoGate] = useState('');
   const [estado, setEstado] = useState('Disponible');
-  const [terminalId, setTerminalId] = useState<number>(1);
+  const [terminalId, setTerminalId] = useState<number>(0);
   const [activo, setActivo] = useState(true);
 
   const loadData = async () => {
+    setLoading(true);
+    setErrorMsg(null);
     try {
       const [pRes, tRes] = await Promise.all([
         axiosClient.get<PuertaEmbarqueDto[]>('/puertasembarque'),
@@ -20,18 +24,10 @@ export default function PuertasEmbarquePage() {
       ]);
       setPuertas(pRes.data);
       setTerminales(tRes.data);
-    } catch {
-      setTerminales([
-        { id: 1, codigo: 'T1', nombre: 'Terminal Nacional e Internacional 1 (LIM)', aeropuertoId: 1, activo: true },
-        { id: 2, codigo: 'T2', nombre: 'Nueva Terminal Internacional Hub LIM', aeropuertoId: 1, activo: true },
-        { id: 3, codigo: 'T-CUZ', nombre: 'Terminal Principal Cusco', aeropuertoId: 2, activo: true }
-      ]);
-      setPuertas([
-        { id: 1, codigoGate: 'A12', estado: 'Disponible', terminalId: 1, activo: true },
-        { id: 2, codigoGate: 'A14', estado: 'En Abordaje', terminalId: 1, activo: true },
-        { id: 3, codigoGate: 'B04', estado: 'Disponible', terminalId: 2, activo: true },
-        { id: 4, codigoGate: 'C02', estado: 'Mantenimiento', terminalId: 3, activo: true }
-      ]);
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/puertasembarque.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -43,7 +39,7 @@ export default function PuertasEmbarquePage() {
     setEditing(null);
     setCodigoGate('');
     setEstado('Disponible');
-    setTerminalId(terminales[0]?.id || 1);
+    setTerminalId(terminales[0]?.id || 0);
     setActivo(true);
     setShowModal(true);
   };
@@ -59,6 +55,7 @@ export default function PuertasEmbarquePage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
     try {
       if (editing) {
         await axiosClient.put(`/puertasembarque/${editing.id}`, {
@@ -71,23 +68,11 @@ export default function PuertasEmbarquePage() {
       } else {
         await axiosClient.post('/puertasembarque', { codigoGate, estado, terminalId });
       }
+      setShowModal(false);
       await loadData();
-    } catch {
-      if (editing) {
-        setPuertas((prev) =>
-          prev.map((p) =>
-            p.id === editing.id ? { ...p, codigoGate, estado, terminalId, activo } : p
-          )
-        );
-      } else {
-        const nextId = puertas.length ? Math.max(...puertas.map((p) => p.id)) + 1 : 1;
-        setPuertas((prev) => [
-          ...prev,
-          { id: nextId, codigoGate, estado, terminalId, activo: true }
-        ]);
-      }
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al guardar puerta de embarque en la BD.');
     }
-    setShowModal(false);
   };
 
   const getTerminalLabel = (id: number) => {
@@ -96,8 +81,8 @@ export default function PuertasEmbarquePage() {
   };
 
   const getGateBadge = (st: string) => {
-    if (st === 'Disponible') return 'bg-emerald-50 border-emerald-200 text-emerald-700';
-    if (st === 'Mantenimiento') return 'bg-red-50 border-red-200 text-red-700';
+    if (st.toUpperCase() === 'DISPONIBLE') return 'bg-emerald-50 border-emerald-200 text-emerald-700';
+    if (st.toUpperCase() === 'MANTENIMIENTO') return 'bg-red-50 border-red-200 text-red-700';
     return 'bg-amber-50 border-amber-200 text-amber-700';
   };
 
@@ -110,7 +95,7 @@ export default function PuertasEmbarquePage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Puertas de Embarque (Gates)</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Posiciones de embarque asociadas a terminales para asignación operativa de vuelos.
+            Registros en vivo desde la tabla PuertaEmbarque en Neon Cloud PostgreSQL (`GET /api/puertasembarque`).
           </p>
         </div>
         <button
@@ -122,6 +107,12 @@ export default function PuertasEmbarquePage() {
           <span>Registrar Puerta de Embarque</span>
         </button>
       </div>
+
+      {errorMsg && (
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+          {errorMsg}
+        </div>
+      )}
 
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -135,37 +126,47 @@ export default function PuertasEmbarquePage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 text-xs">
-            {puertas.map((item) => (
-              <tr key={item.id} className="hover:bg-zinc-50">
-                <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
-                <td className="py-3 px-4">
-                  <span className="font-mono-code font-bold px-2.5 py-0.5 rounded bg-sky-50 border border-sky-200 text-[#0284C7]">
-                    GATE {item.codigoGate}
-                  </span>
-                </td>
-                <td className="py-3 px-4 font-medium text-[#18181B]">
-                  {getTerminalLabel(item.terminalId)}
-                </td>
-                <td className="py-3 px-4">
-                  <span
-                    className={`inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold ${getGateBadge(
-                      item.estado
-                    )}`}
-                  >
-                    {item.estado}
-                  </span>
-                </td>
-                <td className="py-3 px-4 text-right">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(item)}
-                    className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
-                  >
-                    Editar
-                  </button>
+            {puertas.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="py-8 text-center text-zinc-500">
+                  {loading
+                    ? 'Consultando GET /api/puertasembarque...'
+                    : 'No hay puertas de embarque registradas en la base de datos.'}
                 </td>
               </tr>
-            ))}
+            ) : (
+              puertas.map((item) => (
+                <tr key={item.id} className="hover:bg-zinc-50">
+                  <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
+                  <td className="py-3 px-4">
+                    <span className="font-mono-code font-bold px-2.5 py-0.5 rounded bg-sky-50 border border-sky-200 text-[#0284C7]">
+                      GATE {item.codigoGate}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 font-medium text-[#18181B]">
+                    {getTerminalLabel(item.terminalId)}
+                  </td>
+                  <td className="py-3 px-4">
+                    <span
+                      className={`inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold ${getGateBadge(
+                        item.estado
+                      )}`}
+                    >
+                      {item.estado}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(item)}
+                      className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
+                    >
+                      Editar
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -191,6 +192,7 @@ export default function PuertasEmbarquePage() {
                   Terminal Asociada
                 </label>
                 <select
+                  required
                   value={terminalId}
                   onChange={(e) => setTerminalId(Number(e.target.value))}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
@@ -225,7 +227,7 @@ export default function PuertasEmbarquePage() {
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                 >
                   <option value="Disponible">Disponible</option>
-                  <option value="En Abordaje">En Abordaje</option>
+                  <option value="Ocupada">Ocupada</option>
                   <option value="Mantenimiento">Mantenimiento</option>
                 </select>
               </div>

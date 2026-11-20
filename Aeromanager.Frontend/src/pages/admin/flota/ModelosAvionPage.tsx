@@ -4,24 +4,26 @@ import { ModeloAvionDto } from '../../../types/models';
 
 export default function ModelosAvionPage() {
   const [modelos, setModelos] = useState<ModeloAvionDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<ModeloAvionDto | null>(null);
   const [fabricante, setFabricante] = useState('Airbus');
   const [nombreModelo, setNombreModelo] = useState('');
-  const [capacidadTotal, setCapacidadTotal] = useState<number>(180);
-  const [alcanceKm, setAlcanceKm] = useState<number>(6300);
+  const [capacidadTeorica, setCapacidadTeorica] = useState<number>(180);
+  const [autonomiaKm, setAutonomiaKm] = useState<number>(6300);
   const [activo, setActivo] = useState(true);
 
   const loadData = async () => {
+    setLoading(true);
+    setErrorMsg(null);
     try {
       const res = await axiosClient.get<ModeloAvionDto[]>('/modelosavion');
       setModelos(res.data);
-    } catch {
-      setModelos([
-        { id: 1, fabricante: 'Airbus', nombreModelo: 'A320neo', capacidadTotal: 180, alcanceKm: 6300, activo: true },
-        { id: 2, fabricante: 'Boeing', nombreModelo: '737 MAX 8', capacidadTotal: 189, alcanceKm: 6570, activo: true },
-        { id: 3, fabricante: 'Boeing', nombreModelo: '787-9 Dreamliner', capacidadTotal: 290, alcanceKm: 14140, activo: true }
-      ]);
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/modelosavion.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -33,8 +35,8 @@ export default function ModelosAvionPage() {
     setEditing(null);
     setFabricante('Airbus');
     setNombreModelo('');
-    setCapacidadTotal(180);
-    setAlcanceKm(6300);
+    setCapacidadTeorica(180);
+    setAutonomiaKm(6300);
     setActivo(true);
     setShowModal(true);
   };
@@ -43,51 +45,38 @@ export default function ModelosAvionPage() {
     setEditing(item);
     setFabricante(item.fabricante);
     setNombreModelo(item.nombreModelo);
-    setCapacidadTotal(item.capacidadTotal);
-    setAlcanceKm(item.alcanceKm);
+    setCapacidadTeorica(item.capacidadTeorica);
+    setAutonomiaKm(item.autonomiaKm);
     setActivo(item.activo);
     setShowModal(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
     try {
       if (editing) {
         await axiosClient.put(`/modelosavion/${editing.id}`, {
           id: editing.id,
           fabricante,
           nombreModelo,
-          capacidadTotal,
-          alcanceKm,
+          capacidadTeorica,
+          autonomiaKm,
           activo
         });
       } else {
         await axiosClient.post('/modelosavion', {
           fabricante,
           nombreModelo,
-          capacidadTotal,
-          alcanceKm
+          capacidadTeorica,
+          autonomiaKm
         });
       }
+      setShowModal(false);
       await loadData();
-    } catch {
-      if (editing) {
-        setModelos((prev) =>
-          prev.map((m) =>
-            m.id === editing.id
-              ? { ...m, fabricante, nombreModelo, capacidadTotal, alcanceKm, activo }
-              : m
-          )
-        );
-      } else {
-        const nextId = modelos.length ? Math.max(...modelos.map((m) => m.id)) + 1 : 1;
-        setModelos((prev) => [
-          ...prev,
-          { id: nextId, fabricante, nombreModelo, capacidadTotal, alcanceKm, activo: true }
-        ]);
-      }
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al guardar modelo de avión en la BD.');
     }
-    setShowModal(false);
   };
 
   return (
@@ -99,7 +88,7 @@ export default function ModelosAvionPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Modelos de Avión</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Ficha técnica de capacidad teórica de asientos y autonomía máxima en kilómetros.
+            Registros en vivo desde la tabla ModeloAvion (`CapacidadTeorica` y `AutonomiaKm` en Neon Cloud PostgreSQL).
           </p>
         </div>
         <button
@@ -111,6 +100,12 @@ export default function ModelosAvionPage() {
           <span>Registrar Modelo de Aeronave</span>
         </button>
       </div>
+
+      {errorMsg && (
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+          {errorMsg}
+        </div>
+      )}
 
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -125,28 +120,38 @@ export default function ModelosAvionPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 text-xs">
-            {modelos.map((item) => (
-              <tr key={item.id} className="hover:bg-zinc-50">
-                <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
-                <td className="py-3 px-4 font-semibold text-zinc-700">{item.fabricante}</td>
-                <td className="py-3 px-4 font-mono-code font-bold text-[#0284C7]">
-                  {item.nombreModelo}
-                </td>
-                <td className="py-3 px-4 font-mono-code">{item.capacidadTotal} PAX</td>
-                <td className="py-3 px-4 font-mono-code">
-                  {item.alcanceKm.toLocaleString()} km
-                </td>
-                <td className="py-3 px-4 text-right">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(item)}
-                    className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
-                  >
-                    Editar
-                  </button>
+            {modelos.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="py-8 text-center text-zinc-500">
+                  {loading
+                    ? 'Consultando GET /api/modelosavion...'
+                    : 'No hay modelos de avión registrados en la base de datos.'}
                 </td>
               </tr>
-            ))}
+            ) : (
+              modelos.map((item) => (
+                <tr key={item.id} className="hover:bg-zinc-50">
+                  <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
+                  <td className="py-3 px-4 font-semibold text-zinc-700">{item.fabricante}</td>
+                  <td className="py-3 px-4 font-mono-code font-bold text-[#0284C7]">
+                    {item.nombreModelo}
+                  </td>
+                  <td className="py-3 px-4 font-mono-code">{item.capacidadTeorica} PAX</td>
+                  <td className="py-3 px-4 font-mono-code">
+                    {item.autonomiaKm.toLocaleString()} km
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(item)}
+                      className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
+                    >
+                      Editar
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -202,8 +207,8 @@ export default function ModelosAvionPage() {
                     type="number"
                     required
                     min={1}
-                    value={capacidadTotal}
-                    onChange={(e) => setCapacidadTotal(Number(e.target.value))}
+                    value={capacidadTeorica}
+                    onChange={(e) => setCapacidadTeorica(Number(e.target.value))}
                     className="w-full h-9 px-3 rounded border border-zinc-300 font-mono-code text-xs outline-none focus:border-[#0284C7]"
                   />
                 </div>
@@ -215,8 +220,8 @@ export default function ModelosAvionPage() {
                     type="number"
                     required
                     min={100}
-                    value={alcanceKm}
-                    onChange={(e) => setAlcanceKm(Number(e.target.value))}
+                    value={autonomiaKm}
+                    onChange={(e) => setAutonomiaKm(Number(e.target.value))}
                     className="w-full h-9 px-3 rounded border border-zinc-300 font-mono-code text-xs outline-none focus:border-[#0284C7]"
                   />
                 </div>

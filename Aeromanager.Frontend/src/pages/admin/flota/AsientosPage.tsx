@@ -6,13 +6,19 @@ export default function AsientosPage() {
   const [asientos, setAsientos] = useState<AsientoDto[]>([]);
   const [aviones, setAviones] = useState<AvionDto[]>([]);
   const [clases, setClases] = useState<ClaseAsientoDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [avionId, setAvionId] = useState<number>(1);
-  const [claseAsientoId, setClaseAsientoId] = useState<number>(1);
+  const [editing, setEditing] = useState<AsientoDto | null>(null);
+  const [avionId, setAvionId] = useState<number>(0);
+  const [claseAsientoId, setClaseAsientoId] = useState<number>(0);
   const [fila, setFila] = useState<number>(1);
-  const [columna, setColumna] = useState('A');
+  const [letra, setLetra] = useState('A');
+  const [activo, setActivo] = useState(true);
 
   const loadData = async () => {
+    setLoading(true);
+    setErrorMsg(null);
     try {
       const [asRes, avRes, clRes] = await Promise.all([
         axiosClient.get<AsientoDto[]>('/asientos'),
@@ -22,23 +28,10 @@ export default function AsientosPage() {
       setAsientos(asRes.data);
       setAviones(avRes.data);
       setClases(clRes.data);
-    } catch {
-      setAviones([
-        { id: 1, matricula: 'OB-2150-P', estadoOperativo: 'Operativo', aerolineaId: 1, modeloAvionId: 1, activo: true },
-        { id: 2, matricula: 'OB-2290-P', estadoOperativo: 'Operativo', aerolineaId: 1, modeloAvionId: 2, activo: true }
-      ]);
-      setClases([
-        { id: 1, nombre: 'Económica', multiplicadorTarifa: 1.0, activo: true },
-        { id: 3, nombre: 'Ejecutiva', multiplicadorTarifa: 2.1, activo: true }
-      ]);
-      setAsientos([
-        { id: 1, codigoAsiento: '1A', fila: 1, columna: 'A', avionId: 1, claseAsientoId: 3, activo: true },
-        { id: 2, codigoAsiento: '1B', fila: 1, columna: 'B', avionId: 1, claseAsientoId: 3, activo: true },
-        { id: 3, codigoAsiento: '1C', fila: 1, columna: 'C', avionId: 1, claseAsientoId: 3, activo: true },
-        { id: 4, codigoAsiento: '12A', fila: 12, columna: 'A', avionId: 1, claseAsientoId: 1, activo: true },
-        { id: 5, codigoAsiento: '12B', fila: 12, columna: 'B', avionId: 1, claseAsientoId: 1, activo: true },
-        { id: 6, codigoAsiento: '12F', fila: 12, columna: 'F', avionId: 1, claseAsientoId: 1, activo: true }
-      ]);
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/asientos.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -46,41 +39,59 @@ export default function AsientosPage() {
     loadData();
   }, []);
 
-  const getUbicacionPorColumna = (col: string) => {
-    const letra = col.toUpperCase();
-    if (letra === 'A' || letra === 'F') return 'Ventana';
-    if (letra === 'C' || letra === 'D') return 'Pasillo';
+  const getUbicacionPorLetra = (col: string) => {
+    const ch = col.toUpperCase();
+    if (ch === 'A' || ch === 'F') return 'Ventana';
+    if (ch === 'C' || ch === 'D') return 'Pasillo';
     return 'Centro';
+  };
+
+  const openCreate = () => {
+    setEditing(null);
+    setAvionId(aviones[0]?.id || 0);
+    setClaseAsientoId(clases[0]?.id || 0);
+    setFila(1);
+    setLetra('A');
+    setActivo(true);
+    setShowModal(true);
+  };
+
+  const openEdit = (item: AsientoDto) => {
+    setEditing(item);
+    setAvionId(item.avionId);
+    setClaseAsientoId(item.claseAsientoId);
+    setFila(item.fila);
+    setLetra(item.letra);
+    setActivo(item.activo);
+    setShowModal(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    const codigoAsiento = `${fila}${columna.toUpperCase()}`;
+    setErrorMsg(null);
     try {
-      await axiosClient.post('/asientos', {
-        codigoAsiento,
-        fila,
-        columna: columna.toUpperCase(),
-        avionId,
-        claseAsientoId
-      });
-      await loadData();
-    } catch {
-      const nextId = asientos.length ? Math.max(...asientos.map((a) => a.id)) + 1 : 1;
-      setAsientos((prev) => [
-        ...prev,
-        {
-          id: nextId,
-          codigoAsiento,
+      if (editing) {
+        await axiosClient.put(`/asientos/${editing.id}`, {
+          id: editing.id,
           fila,
-          columna: columna.toUpperCase(),
+          letra: letra.toUpperCase(),
           avionId,
           claseAsientoId,
-          activo: true
-        }
-      ]);
+          activo
+        });
+      } else {
+        await axiosClient.post('/asientos', {
+          fila,
+          letra: letra.toUpperCase(),
+          avionId,
+          claseAsientoId
+        });
+      }
+      setShowModal(false);
+      await loadData();
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al guardar asiento en la BD.');
     }
-    setShowModal(false);
   };
 
   return (
@@ -92,12 +103,12 @@ export default function AsientosPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Configuración de Asientos</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Distribución física de butacas por aeronave (ubicación Ventana/Centro/Pasillo calculada automáticamente).
+            Registros en vivo desde la tabla Asiento (`Fila`, `Letra`, `AvionId`, `ClaseAsientoId`) en Neon Cloud PostgreSQL.
           </p>
         </div>
         <button
           type="button"
-          onClick={() => setShowModal(true)}
+          onClick={openCreate}
           className="h-9 px-4 rounded bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer"
         >
           <span className="material-symbols-outlined text-[18px]">add</span>
@@ -105,48 +116,75 @@ export default function AsientosPage() {
         </button>
       </div>
 
+      {errorMsg && (
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+          {errorMsg}
+        </div>
+      )}
+
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-[#F4F4F5] border-b border-zinc-200 text-[11px] text-zinc-500 uppercase tracking-wider">
               <th className="py-2.5 px-4 font-semibold">ID</th>
-              <th className="py-2.5 px-4 font-semibold">Código Asiento</th>
+              <th className="py-2.5 px-4 font-semibold">Asiento (Fila + Letra)</th>
               <th className="py-2.5 px-4 font-semibold">Aeronave (Matrícula)</th>
-              <th className="py-2.5 px-4 font-semibold">Fila / Columna</th>
+              <th className="py-2.5 px-4 font-semibold">Fila / Letra</th>
               <th className="py-2.5 px-4 font-semibold">Ubicación Calculada</th>
               <th className="py-2.5 px-4 font-semibold">Clase Asignada</th>
+              <th className="py-2.5 px-4 font-semibold text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 text-xs">
-            {asientos.map((item) => {
-              const av = aviones.find((a) => a.id === item.avionId);
-              const cl = clases.find((c) => c.id === item.claseAsientoId);
-              const ubic = getUbicacionPorColumna(item.columna);
-              return (
-                <tr key={item.id} className="hover:bg-zinc-50">
-                  <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
-                  <td className="py-3 px-4">
-                    <span className="font-mono-code font-bold px-2.5 py-0.5 rounded bg-sky-50 border border-sky-200 text-[#0284C7]">
-                      {item.codigoAsiento}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 font-mono-code font-semibold text-[#18181B]">
-                    {av ? av.matricula : `AV #${item.avionId}`}
-                  </td>
-                  <td className="py-3 px-4 font-mono-code text-zinc-700">
-                    Fila {item.fila} • Col {item.columna}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="font-mono-code text-[11px] px-2 py-0.5 rounded bg-zinc-100 border border-zinc-300 text-zinc-700">
-                      {ubic}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 font-semibold text-emerald-700">
-                    {cl ? cl.nombre : `Clase #${item.claseAsientoId}`}
-                  </td>
-                </tr>
-              );
-            })}
+            {asientos.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="py-8 text-center text-zinc-500">
+                  {loading
+                    ? 'Consultando GET /api/asientos...'
+                    : 'No hay asientos registrados en la base de datos.'}
+                </td>
+              </tr>
+            ) : (
+              asientos.map((item) => {
+                const av = aviones.find((a) => a.id === item.avionId);
+                const cl = clases.find((c) => c.id === item.claseAsientoId);
+                const ubic = getUbicacionPorLetra(item.letra);
+                return (
+                  <tr key={item.id} className="hover:bg-zinc-50">
+                    <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
+                    <td className="py-3 px-4">
+                      <span className="font-mono-code font-bold px-2.5 py-0.5 rounded bg-sky-50 border border-sky-200 text-[#0284C7]">
+                        {item.fila}
+                        {item.letra}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 font-mono-code font-semibold text-[#18181B]">
+                      {av ? av.matricula : `AV #${item.avionId}`}
+                    </td>
+                    <td className="py-3 px-4 font-mono-code text-zinc-700">
+                      Fila {item.fila} • Letra {item.letra}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="font-mono-code text-[11px] px-2 py-0.5 rounded bg-zinc-100 border border-zinc-300 text-zinc-700">
+                        {ubic}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 font-semibold text-emerald-700">
+                      {cl ? cl.nombre : `Clase #${item.claseAsientoId}`}
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <button
+                        type="button"
+                        onClick={() => openEdit(item)}
+                        className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
+                      >
+                        Editar
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
           </tbody>
         </table>
       </div>
@@ -156,7 +194,7 @@ export default function AsientosPage() {
           <div className="w-full max-w-md bg-white border border-zinc-200 rounded-xl shadow-xl overflow-hidden">
             <div className="px-5 py-4 bg-[#F4F4F5] border-b border-zinc-200 flex items-center justify-between">
               <h3 className="text-sm font-bold text-[#18181B]">
-                Registrar Asiento en Aeronave
+                {editing ? 'Editar Asiento Físico' : 'Registrar Asiento en Aeronave'}
               </h3>
               <button
                 type="button"
@@ -172,6 +210,7 @@ export default function AsientosPage() {
                   Aeronave Física
                 </label>
                 <select
+                  required
                   value={avionId}
                   onChange={(e) => setAvionId(Number(e.target.value))}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
@@ -188,6 +227,7 @@ export default function AsientosPage() {
                   Clase de Asiento
                 </label>
                 <select
+                  required
                   value={claseAsientoId}
                   onChange={(e) => setClaseAsientoId(Number(e.target.value))}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
@@ -202,7 +242,7 @@ export default function AsientosPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
-                    Número de Fila (1-40)
+                    Número de Fila (&gt; 0)
                   </label>
                   <input
                     type="number"
@@ -216,26 +256,26 @@ export default function AsientosPage() {
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
-                    Columna (A - F)
+                    Letra (A - F)
                   </label>
                   <select
-                    value={columna}
-                    onChange={(e) => setColumna(e.target.value)}
+                    value={letra}
+                    onChange={(e) => setLetra(e.target.value)}
                     className="w-full h-9 px-3 rounded border border-zinc-300 font-mono-code text-xs bg-white outline-none focus:border-[#0284C7]"
                   >
                     {['A', 'B', 'C', 'D', 'E', 'F'].map((col) => (
                       <option key={col} value={col}>
-                        {col} ({getUbicacionPorColumna(col)})
+                        {col} ({getUbicacionPorLetra(col)})
                       </option>
                     ))}
                   </select>
                 </div>
               </div>
               <div className="p-2.5 rounded bg-[#F4F4F5] border border-zinc-200 text-xs flex items-center justify-between">
-                <span className="text-zinc-600">Código Generado:</span>
+                <span className="text-zinc-600">Designador Físico:</span>
                 <span className="font-mono-code font-bold text-[#0284C7]">
                   {fila}
-                  {columna} — {getUbicacionPorColumna(columna)}
+                  {letra} — {getUbicacionPorLetra(letra)}
                 </span>
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t border-zinc-200">

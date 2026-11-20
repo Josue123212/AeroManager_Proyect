@@ -10,98 +10,74 @@ export default function DashboardEjecutivoPage() {
   const [rutas, setRutas] = useState<RutaDto[]>([]);
   const [reservas, setReservas] = useState<ReservaDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const fetchMetrics = async () => {
+    setLoading(true);
+    setErrorMsg(null);
+    try {
+      const [aeroRes, avRes, vueRes, rutRes, resRes] = await Promise.all([
+        axiosClient.get<AeropuertoDto[]>('/aeropuertos'),
+        axiosClient.get<AvionDto[]>('/aviones'),
+        axiosClient.get<VueloDto[]>('/vuelos'),
+        axiosClient.get<RutaDto[]>('/rutas'),
+        axiosClient.get<ReservaDto[]>('/reservas')
+      ]);
+      setAeropuertos(aeroRes.data);
+      setAviones(avRes.data);
+      setVuelos(vueRes.data);
+      setRutas(rutRes.data);
+      setReservas(resRes.data);
+    } catch (err: any) {
+      setErrorMsg(
+        err.response?.data?.message ||
+          'No se pudo conectar con Aeromanager.Api. Asegúrese de que el backend esté corriendo.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchMetrics = async () => {
-      setLoading(true);
-      try {
-        const [aeroRes, avRes, vueRes, rutRes, resRes] = await Promise.all([
-          axiosClient.get<AeropuertoDto[]>('/aeropuertos'),
-          axiosClient.get<AvionDto[]>('/aviones'),
-          axiosClient.get<VueloDto[]>('/vuelos'),
-          axiosClient.get<RutaDto[]>('/rutas'),
-          axiosClient.get<ReservaDto[]>('/reservas')
-        ]);
-        setAeropuertos(aeroRes.data);
-        setAviones(avRes.data);
-        setVuelos(vueRes.data);
-        setRutas(rutRes.data);
-        setReservas(resRes.data);
-      } catch {
-        // Datos semillas de respaldo en caso el API local aún no esté corriendo
-        setAeropuertos([
-          { id: 1, nombre: 'Aeropuerto Internacional Jorge Chávez', codigoIata: 'LIM', ciudadId: 1, direccion: 'Av. Elmer Faucett s/n, Callao', activo: true },
-          { id: 2, nombre: 'Aeropuerto Internacional Alejandro Velasco Astete', codigoIata: 'CUZ', ciudadId: 2, direccion: 'Av. Velasco Astete s/n, Cusco', activo: true },
-          { id: 3, nombre: 'Aeropuerto Internacional Rodríguez Ballón', codigoIata: 'AQP', ciudadId: 3, direccion: 'Av. Aviación Km 1, Cerro Colorado', activo: true },
-          { id: 4, nombre: 'Aeropuerto Internacional El Dorado', codigoIata: 'BOG', ciudadId: 4, direccion: 'Av. El Dorado #103-9, Bogotá', activo: true },
-          { id: 5, nombre: 'Aeropuerto Internacional Arturo Merino Benítez', codigoIata: 'SCL', ciudadId: 5, direccion: 'Armando Cortínez Oriente 1704, Pudahuel', activo: true }
-        ]);
-        setAviones([
-          { id: 1, matricula: 'OB-2150-P', estadoOperativo: 'Operativo', aerolineaId: 1, modeloAvionId: 1, activo: true },
-          { id: 2, matricula: 'OB-2290-P', estadoOperativo: 'Operativo', aerolineaId: 1, modeloAvionId: 2, activo: true },
-          { id: 3, matricula: 'CC-BGA', estadoOperativo: 'Operativo', aerolineaId: 2, modeloAvionId: 3, activo: true },
-          { id: 4, matricula: 'N784AV', estadoOperativo: 'Mantenimiento', aerolineaId: 3, modeloAvionId: 1, activo: true }
-        ]);
-        setRutas([
-          { id: 1, codigoRuta: 'LIM-CUZ', aeropuertoOrigenId: 1, aeropuertoDestinoId: 2, distanciaKm: 585, duracionEstimadaMinutos: 80, activo: true },
-          { id: 2, codigoRuta: 'LIM-AQP', aeropuertoOrigenId: 1, aeropuertoDestinoId: 3, distanciaKm: 765, duracionEstimadaMinutos: 95, activo: true },
-          { id: 3, codigoRuta: 'LIM-BOG', aeropuertoOrigenId: 1, aeropuertoDestinoId: 4, distanciaKm: 1885, duracionEstimadaMinutos: 190, activo: true },
-          { id: 4, codigoRuta: 'LIM-SCL', aeropuertoOrigenId: 1, aeropuertoDestinoId: 5, distanciaKm: 2453, duracionEstimadaMinutos: 215, activo: true }
-        ]);
-        setVuelos([
-          { id: 1, numeroVuelo: 'AM-104', rutaId: 1, avionId: 1, puertaEmbarqueId: 1, fechaHoraSalida: '2026-11-20T14:30:00Z', fechaHoraLlegada: '2026-11-20T15:50:00Z', capacidadVuelo: 180, precioBase: 125.0, estado: 'Abordando', activo: true },
-          { id: 2, numeroVuelo: 'AM-210', rutaId: 2, avionId: 2, puertaEmbarqueId: 2, fechaHoraSalida: '2026-11-20T16:00:00Z', fechaHoraLlegada: '2026-11-20T17:35:00Z', capacidadVuelo: 180, precioBase: 98.5, estado: 'Programado', activo: true },
-          { id: 3, numeroVuelo: 'AM-502', rutaId: 3, avionId: 3, puertaEmbarqueId: 3, fechaHoraSalida: '2026-11-20T18:15:00Z', fechaHoraLlegada: '2026-11-20T21:25:00Z', capacidadVuelo: 250, precioBase: 340.0, estado: 'Programado', activo: true },
-          { id: 4, numeroVuelo: 'AM-718', rutaId: 4, avionId: 1, puertaEmbarqueId: 1, fechaHoraSalida: '2026-11-20T20:00:00Z', fechaHoraLlegada: '2026-11-20T23:35:00Z', capacidadVuelo: 180, precioBase: 295.0, estado: 'EnVuelo', activo: true }
-        ]);
-        setReservas([
-          { id: 1, codigoTicket: 'TCK-2026-8841', vueloId: 1, usuarioRegistroId: 3, fechaReserva: '2026-11-20T09:15:00Z', montoTotal: 125.0, estadoReserva: 'Confirmada', activo: true },
-          { id: 2, codigoTicket: 'TCK-2026-8842', vueloId: 1, usuarioRegistroId: 3, fechaReserva: '2026-11-20T09:30:00Z', montoTotal: 250.0, estadoReserva: 'Confirmada', activo: true },
-          { id: 3, codigoTicket: 'TCK-2026-8843', vueloId: 3, usuarioRegistroId: 3, fechaReserva: '2026-11-20T10:10:00Z', montoTotal: 510.0, estadoReserva: 'Confirmada', activo: true }
-        ]);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchMetrics();
   }, []);
 
   const aeropuertosActivos = aeropuertos.filter((a) => a.activo).length;
-  const avionesOperativos = aviones.filter((a) => a.activo && a.estadoOperativo === 'Operativo').length;
-  const avionesMantenimiento = aviones.filter((a) => a.activo && a.estadoOperativo !== 'Operativo').length;
+  const avionesOperativos = aviones.filter(
+    (a) => a.activo && a.estadoOperativo.toUpperCase() === 'OPERATIVO'
+  ).length;
+  const avionesMantenimiento = aviones.filter(
+    (a) => a.activo && a.estadoOperativo.toUpperCase() !== 'OPERATIVO'
+  ).length;
   const vuelosProgramados = vuelos.filter((v) => v.activo).length;
-  const reservasConfirmadas = reservas.filter((r) => r.activo && r.estadoReserva !== 'Cancelada');
+  const reservasConfirmadas = reservas.filter(
+    (r) => r.activo && r.estadoReserva.toUpperCase() !== 'CANCELADA'
+  );
   const facturacionTotal = reservasConfirmadas.reduce((acc, r) => acc + r.montoTotal, 0);
 
   const getRutaLabel = (rutaId: number) => {
     const r = rutas.find((x) => x.id === rutaId);
     if (!r) return `Ruta #${rutaId}`;
-    const orig = aeropuertos.find((a) => a.id === r.aeropuertoOrigenId)?.codigoIata || 'LIM';
-    const dest = aeropuertos.find((a) => a.id === r.aeropuertoDestinoId)?.codigoIata || 'CUZ';
+    const orig = aeropuertos.find((a) => a.id === r.aeropuertoOrigenId)?.codigoIata || `#${r.aeropuertoOrigenId}`;
+    const dest = aeropuertos.find((a) => a.id === r.aeropuertoDestinoId)?.codigoIata || `#${r.aeropuertoDestinoId}`;
     return `${orig} → ${dest} (${r.codigoRuta})`;
   };
 
   const getAvionLabel = (avionId: number) => {
     const av = aviones.find((x) => x.id === avionId);
-    return av ? av.matricula : `AV-${avionId}`;
+    return av ? av.matricula : `AV #${avionId}`;
   };
 
   const getStatusBadge = (estado: string) => {
-    switch (estado) {
-      case 'Abordando':
-        return 'bg-amber-50 border-amber-200 text-amber-700';
-      case 'EnVuelo':
-        return 'bg-emerald-50 border-emerald-200 text-emerald-700';
-      case 'Cancelado':
-        return 'bg-red-50 border-red-200 text-red-700';
-      default:
-        return 'bg-sky-50 border-sky-200 text-[#0284C7]';
-    }
+    const st = estado.toUpperCase();
+    if (st.includes('ABORD')) return 'bg-amber-50 border-amber-200 text-amber-700';
+    if (st.includes('VUELO') || st.includes('ATERRIZ')) return 'bg-emerald-50 border-emerald-200 text-emerald-700';
+    if (st.includes('CANCEL')) return 'bg-red-50 border-red-200 text-red-700';
+    return 'bg-sky-50 border-sky-200 text-[#0284C7]';
   };
 
   return (
     <div className="flex flex-col w-full space-y-6">
-      {/* Encabezado Ejecutivo */}
       <section className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="flex flex-col">
           <div className="flex items-center gap-1.5 mb-1">
@@ -116,20 +92,29 @@ export default function DashboardEjecutivoPage() {
           <h1 className="text-2xl font-bold text-[#18181B] tracking-tight">Dashboard Ejecutivo</h1>
           <p className="text-xs text-zinc-500 mt-1">
             Monitoreo centralizado de infraestructura IATA, flota aérea, vuelos y facturación en
-            tiempo real.
+            tiempo real desde Neon Cloud PostgreSQL.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="font-mono-code text-xs px-3 py-1.5 rounded bg-[#F4F4F5] border border-zinc-200 text-zinc-700">
-            {loading ? 'Sincronizando Neon DB...' : 'Telemetría Actualizada'}
-          </span>
+          <button
+            type="button"
+            onClick={fetchMetrics}
+            className="font-mono-code text-xs px-3 py-1.5 rounded bg-[#F4F4F5] hover:bg-zinc-200 border border-zinc-200 text-zinc-700 cursor-pointer"
+          >
+            {loading ? 'Consultando Neon DB...' : '↻ Actualizar Telemetría'}
+          </button>
         </div>
       </section>
 
-      {/* 4 Tarjetas KPI */}
+      {errorMsg && (
+        <div className="p-3.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+          {errorMsg}
+        </div>
+      )}
+
+      {/* 4 Tarjetas KPI alimentadas 100% por la BD */}
       <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {/* KPI 1: Aeropuertos Activos */}
         <div className="flex flex-col justify-between p-4 bg-white border border-zinc-200 rounded-xl shadow-2xs">
           <div className="flex items-start justify-between">
             <div className="flex flex-col">
@@ -150,7 +135,7 @@ export default function DashboardEjecutivoPage() {
             </div>
           </div>
           <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-100">
-            <span className="font-mono-code text-zinc-500">Códigos IATA 3FN</span>
+            <span className="font-mono-code text-zinc-500">GET /api/aeropuertos</span>
             <Link
               to="/admin/aeropuertos"
               className="text-emerald-700 font-semibold font-mono-code text-[11px] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded hover:bg-emerald-100"
@@ -160,7 +145,6 @@ export default function DashboardEjecutivoPage() {
           </div>
         </div>
 
-        {/* KPI 2: Flota de Aviones */}
         <div className="flex flex-col justify-between p-4 bg-[#F4F4F5] border border-zinc-200 rounded-xl shadow-2xs">
           <div className="flex items-start justify-between">
             <div className="flex flex-col">
@@ -181,12 +165,11 @@ export default function DashboardEjecutivoPage() {
           <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-200/70">
             <span className="text-emerald-700 font-semibold">{avionesOperativos} en servicio</span>
             <span className="font-mono-code text-[11px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">
-              {avionesMantenimiento} en hangar
+              {avionesMantenimiento} otros estados
             </span>
           </div>
         </div>
 
-        {/* KPI 3: Vuelos Programados */}
         <div className="flex flex-col justify-between p-4 bg-white border border-zinc-200 rounded-xl shadow-2xs">
           <div className="flex items-start justify-between">
             <div className="flex flex-col">
@@ -207,14 +190,13 @@ export default function DashboardEjecutivoPage() {
             </div>
           </div>
           <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-100">
-            <span className="text-zinc-500 font-mono-code">Rutas Activas: {rutas.length}</span>
+            <span className="text-zinc-500 font-mono-code">Rutas en BD: {rutas.length}</span>
             <span className="inline-flex items-center gap-0.5 text-emerald-700 font-semibold font-mono-code text-[11px] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
-              On-Time 98.4%
+              GET /api/vuelos
             </span>
           </div>
         </div>
 
-        {/* KPI 4: Reservas Confirmadas */}
         <div className="flex flex-col justify-between p-4 bg-[#F4F4F5] border border-zinc-200 rounded-xl shadow-2xs">
           <div className="flex items-start justify-between">
             <div className="flex flex-col">
@@ -237,13 +219,13 @@ export default function DashboardEjecutivoPage() {
           <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-200/70">
             <span className="text-zinc-600 font-mono-code">Divisa: USD</span>
             <span className="text-emerald-700 font-semibold font-mono-code text-[11px] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
-              {reservasConfirmadas.length} Tickets Emitidos
+              {reservasConfirmadas.length} Tickets en BD
             </span>
           </div>
         </div>
       </section>
 
-      {/* Tabla de Actividad Reciente de Vuelos + Botones de Reportes Excel e IA */}
+      {/* Tabla de Actividad Reciente de Vuelos */}
       <section className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden flex flex-col">
         <div className="p-4 sm:px-6 bg-[#F4F4F5] border-b border-zinc-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
@@ -253,7 +235,7 @@ export default function DashboardEjecutivoPage() {
             <div>
               <h2 className="text-sm font-bold text-[#18181B]">Actividad Reciente de Vuelos</h2>
               <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
-                Operaciones Sincronizadas en Base de Datos
+                Registros Reales de la Tabla Vuelo en Neon Cloud PostgreSQL
               </span>
             </div>
           </div>
@@ -289,35 +271,45 @@ export default function DashboardEjecutivoPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 text-xs text-zinc-800">
-              {vuelos.slice(0, 6).map((v) => (
-                <tr key={v.id} className="hover:bg-zinc-50 transition-colors">
-                  <td className="py-3 px-4 sm:px-6 font-mono-code font-bold text-[#0284C7]">
-                    {v.numeroVuelo}
-                  </td>
-                  <td className="py-3 px-4 font-medium">{getRutaLabel(v.rutaId)}</td>
-                  <td className="py-3 px-4 font-mono-code text-zinc-700">
-                    {getAvionLabel(v.avionId)}
-                  </td>
-                  <td className="py-3 px-4 font-mono-code text-zinc-600">
-                    {new Date(v.fechaHoraSalida).toLocaleString('es-PE', {
-                      dateStyle: 'short',
-                      timeStyle: 'short'
-                    })}
-                  </td>
-                  <td className="py-3 px-4 font-mono-code font-semibold">
-                    ${v.precioBase.toFixed(2)} USD
-                  </td>
-                  <td className="py-3 px-4 sm:px-6 text-right">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded border font-mono-code text-[11px] font-semibold ${getStatusBadge(
-                        v.estado
-                      )}`}
-                    >
-                      {v.estado}
-                    </span>
+              {vuelos.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-zinc-500">
+                    {loading
+                      ? 'Cargando vuelos desde Neon Cloud PostgreSQL...'
+                      : 'No hay vuelos registrados aún en la tabla Vuelo.'}
                   </td>
                 </tr>
-              ))}
+              ) : (
+                vuelos.slice(0, 8).map((v) => (
+                  <tr key={v.id} className="hover:bg-zinc-50 transition-colors">
+                    <td className="py-3 px-4 sm:px-6 font-mono-code font-bold text-[#0284C7]">
+                      {v.numeroVuelo}
+                    </td>
+                    <td className="py-3 px-4 font-medium">{getRutaLabel(v.rutaId)}</td>
+                    <td className="py-3 px-4 font-mono-code text-zinc-700">
+                      {getAvionLabel(v.avionId)}
+                    </td>
+                    <td className="py-3 px-4 font-mono-code text-zinc-600">
+                      {new Date(v.fechaHoraSalida).toLocaleString('es-PE', {
+                        dateStyle: 'short',
+                        timeStyle: 'short'
+                      })}
+                    </td>
+                    <td className="py-3 px-4 font-mono-code font-semibold">
+                      ${v.precioBase.toFixed(2)} USD
+                    </td>
+                    <td className="py-3 px-4 sm:px-6 text-right">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded border font-mono-code text-[11px] font-semibold ${getStatusBadge(
+                          v.estado
+                        )}`}
+                      >
+                        {v.estado}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

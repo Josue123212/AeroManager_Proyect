@@ -5,14 +5,18 @@ import { AeropuertoDto, TerminalDto } from '../../../types/models';
 export default function TerminalesPage() {
   const [terminales, setTerminales] = useState<TerminalDto[]>([]);
   const [aeropuertos, setAeropuertos] = useState<AeropuertoDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<TerminalDto | null>(null);
   const [codigo, setCodigo] = useState('');
   const [nombre, setNombre] = useState('');
-  const [aeropuertoId, setAeropuertoId] = useState<number>(1);
+  const [aeropuertoId, setAeropuertoId] = useState<number>(0);
   const [activo, setActivo] = useState(true);
 
   const loadData = async () => {
+    setLoading(true);
+    setErrorMsg(null);
     try {
       const [tRes, aRes] = await Promise.all([
         axiosClient.get<TerminalDto[]>('/terminales'),
@@ -20,18 +24,10 @@ export default function TerminalesPage() {
       ]);
       setTerminales(tRes.data);
       setAeropuertos(aRes.data);
-    } catch {
-      setAeropuertos([
-        { id: 1, nombre: 'Jorge Chávez (Lima)', codigoIata: 'LIM', ciudadId: 1, activo: true },
-        { id: 2, nombre: 'Velasco Astete (Cusco)', codigoIata: 'CUZ', ciudadId: 2, activo: true },
-        { id: 4, nombre: 'El Dorado (Bogotá)', codigoIata: 'BOG', ciudadId: 4, activo: true }
-      ]);
-      setTerminales([
-        { id: 1, codigo: 'T1', nombre: 'Terminal Nacional e Internacional 1', aeropuertoId: 1, activo: true },
-        { id: 2, codigo: 'T2', nombre: 'Nueva Terminal Internacional Hub LIM', aeropuertoId: 1, activo: true },
-        { id: 3, codigo: 'T-CUZ', nombre: 'Terminal Principal Cusco', aeropuertoId: 2, activo: true },
-        { id: 4, codigo: 'T1-BOG', nombre: 'Terminal Internacional El Dorado', aeropuertoId: 4, activo: true }
-      ]);
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/terminales.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -43,7 +39,7 @@ export default function TerminalesPage() {
     setEditing(null);
     setCodigo('');
     setNombre('');
-    setAeropuertoId(aeropuertos[0]?.id || 1);
+    setAeropuertoId(aeropuertos[0]?.id || 0);
     setActivo(true);
     setShowModal(true);
   };
@@ -59,6 +55,7 @@ export default function TerminalesPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
     try {
       if (editing) {
         await axiosClient.put(`/terminales/${editing.id}`, {
@@ -71,23 +68,11 @@ export default function TerminalesPage() {
       } else {
         await axiosClient.post('/terminales', { codigo, nombre, aeropuertoId });
       }
+      setShowModal(false);
       await loadData();
-    } catch {
-      if (editing) {
-        setTerminales((prev) =>
-          prev.map((t) =>
-            t.id === editing.id ? { ...t, codigo, nombre, aeropuertoId, activo } : t
-          )
-        );
-      } else {
-        const nextId = terminales.length ? Math.max(...terminales.map((t) => t.id)) + 1 : 1;
-        setTerminales((prev) => [
-          ...prev,
-          { id: nextId, codigo, nombre, aeropuertoId, activo: true }
-        ]);
-      }
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al guardar terminal en la BD.');
     }
-    setShowModal(false);
   };
 
   const getAeropuertoLabel = (id: number) => {
@@ -104,7 +89,7 @@ export default function TerminalesPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Terminales Aeroportuarias</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Edificios terminales asociados a cada sede IATA para agrupación de puertas de embarque.
+            Registros en vivo desde la tabla Terminal en Neon Cloud PostgreSQL (`GET /api/terminales`).
           </p>
         </div>
         <button
@@ -116,6 +101,12 @@ export default function TerminalesPage() {
           <span>Registrar Nueva Terminal</span>
         </button>
       </div>
+
+      {errorMsg && (
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+          {errorMsg}
+        </div>
+      )}
 
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -130,34 +121,44 @@ export default function TerminalesPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 text-xs">
-            {terminales.map((item) => (
-              <tr key={item.id} className="hover:bg-zinc-50">
-                <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
-                <td className="py-3 px-4">
-                  <span className="font-mono-code font-bold px-2 py-0.5 rounded bg-zinc-100 border border-zinc-300 text-zinc-800">
-                    {item.codigo}
-                  </span>
-                </td>
-                <td className="py-3 px-4 font-semibold text-[#18181B]">{item.nombre}</td>
-                <td className="py-3 px-4 text-zinc-700">
-                  {getAeropuertoLabel(item.aeropuertoId)}
-                </td>
-                <td className="py-3 px-4">
-                  <span className="inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold bg-emerald-50 border-emerald-200 text-emerald-700">
-                    {item.activo ? 'Activo' : 'Inactivo'}
-                  </span>
-                </td>
-                <td className="py-3 px-4 text-right">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(item)}
-                    className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
-                  >
-                    Editar
-                  </button>
+            {terminales.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="py-8 text-center text-zinc-500">
+                  {loading
+                    ? 'Consultando GET /api/terminales...'
+                    : 'No hay terminales registradas en la base de datos.'}
                 </td>
               </tr>
-            ))}
+            ) : (
+              terminales.map((item) => (
+                <tr key={item.id} className="hover:bg-zinc-50">
+                  <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
+                  <td className="py-3 px-4">
+                    <span className="font-mono-code font-bold px-2 py-0.5 rounded bg-zinc-100 border border-zinc-300 text-zinc-800">
+                      {item.codigo}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 font-semibold text-[#18181B]">{item.nombre}</td>
+                  <td className="py-3 px-4 text-zinc-700">
+                    {getAeropuertoLabel(item.aeropuertoId)}
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold bg-emerald-50 border-emerald-200 text-emerald-700">
+                      {item.activo ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(item)}
+                      className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
+                    >
+                      Editar
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -183,6 +184,7 @@ export default function TerminalesPage() {
                   Aeropuerto Asociado
                 </label>
                 <select
+                  required
                   value={aeropuertoId}
                   onChange={(e) => setAeropuertoId(Number(e.target.value))}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"

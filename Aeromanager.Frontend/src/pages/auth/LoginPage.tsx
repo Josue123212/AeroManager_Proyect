@@ -48,23 +48,11 @@ export default function LoginPage() {
         })
       );
       navigateByRole(selectedRole);
-    } catch {
-      // Fallback de sesión operativa para demostración con cualquiera de los 3 roles
-      const fallbackUser = {
-        usuarioId: selectedRole === 'Administrador' ? 1 : selectedRole === 'Operador' ? 2 : 3,
-        nombreCompleto:
-          selectedRole === 'Administrador'
-            ? 'Josué Choque (Administrador General)'
-            : selectedRole === 'Operador'
-            ? 'Carlos Mendoza (Despacho & Torre)'
-            : 'Lucía Fernández (Counter Check-In)',
-        email,
-        rolActivo: selectedRole,
-        roles: [selectedRole]
-      };
-      localStorage.setItem('aeromanager_token', 'demo-jwt-token-aeromanager-2026');
-      localStorage.setItem('aeromanager_user', JSON.stringify(fallbackUser));
-      navigateByRole(selectedRole);
+    } catch (err: any) {
+      const msg =
+        err.response?.data?.message ||
+        'No se pudo autenticar contra POST /api/auth/login. Verifique sus credenciales o que Aeromanager.Api esté en ejecución.';
+      setErrorMsg(msg);
     } finally {
       setLoading(false);
     }
@@ -123,7 +111,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Indicadores de cumplimiento en la parte inferior */}
           <div className="mt-6 pt-4 border-t border-zinc-200 flex flex-col gap-2">
             <div className="flex items-center gap-2 text-zinc-700">
               <span className="material-symbols-outlined text-base text-[#0284C7]">verified_user</span>
@@ -153,7 +140,7 @@ export default function LoginPage() {
                 </span>
               </div>
               <p className="text-xs text-zinc-500 mt-1">
-                Ingrese sus credenciales autorizadas o seleccione un perfil operativo de demostración.
+                Ingrese sus credenciales registradas en la tabla Usuario de Neon Cloud PostgreSQL.
               </p>
             </div>
 
@@ -221,12 +208,12 @@ export default function LoginPage() {
 
               <div className="flex items-center justify-between py-1">
                 <span className="text-xs text-zinc-600">
-                  Rol seleccionado:{' '}
+                  Consola destino:{' '}
                   <strong className="text-[#0284C7] font-semibold">{selectedRole}</strong>
                 </span>
                 <span className="font-mono-code text-xs text-emerald-700 flex items-center gap-1">
                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
-                  API Conectada
+                  POST /api/auth/login
                 </span>
               </div>
 
@@ -235,16 +222,16 @@ export default function LoginPage() {
                 disabled={loading}
                 className="w-full h-9 bg-[#0284C7] hover:bg-[#0369A1] text-white text-sm font-semibold rounded shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-60"
               >
-                <span>{loading ? 'Autenticando...' : `Iniciar Sesión como ${selectedRole}`}</span>
+                <span>{loading ? 'Autenticando en Neon DB...' : `Iniciar Sesión (${selectedRole})`}</span>
                 <span className="material-symbols-outlined text-lg">arrow_forward</span>
               </button>
             </form>
 
-            {/* Perfiles Rápidos de Demostración (Los 3 Roles) */}
+            {/* Selector de Consola por Rol */}
             <div className="mt-6 flex flex-col gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-[11px] uppercase text-zinc-500 font-semibold tracking-wider">
-                  Perfiles Rápidos de Demostración (3 Roles)
+                  Selección de Consola Operativa por Rol
                 </span>
                 <span className="flex-1 h-px bg-zinc-200"></span>
               </div>

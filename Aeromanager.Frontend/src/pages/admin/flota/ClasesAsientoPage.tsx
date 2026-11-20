@@ -4,6 +4,8 @@ import { ClaseAsientoDto } from '../../../types/models';
 
 export default function ClasesAsientoPage() {
   const [clases, setClases] = useState<ClaseAsientoDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<ClaseAsientoDto | null>(null);
   const [nombre, setNombre] = useState('');
@@ -11,16 +13,15 @@ export default function ClasesAsientoPage() {
   const [activo, setActivo] = useState(true);
 
   const loadData = async () => {
+    setLoading(true);
+    setErrorMsg(null);
     try {
       const res = await axiosClient.get<ClaseAsientoDto[]>('/clasesasiento');
       setClases(res.data);
-    } catch {
-      setClases([
-        { id: 1, nombre: 'Económica (Coach)', multiplicadorTarifa: 1.0, activo: true },
-        { id: 2, nombre: 'Premium Economy', multiplicadorTarifa: 1.35, activo: true },
-        { id: 3, nombre: 'Ejecutiva (Business)', multiplicadorTarifa: 2.1, activo: true },
-        { id: 4, nombre: 'Primera Clase (First)', multiplicadorTarifa: 3.0, activo: true }
-      ]);
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/clasesasiento.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -46,6 +47,7 @@ export default function ClasesAsientoPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
     try {
       if (editing) {
         await axiosClient.put(`/clasesasiento/${editing.id}`, {
@@ -57,23 +59,11 @@ export default function ClasesAsientoPage() {
       } else {
         await axiosClient.post('/clasesasiento', { nombre, multiplicadorTarifa });
       }
+      setShowModal(false);
       await loadData();
-    } catch {
-      if (editing) {
-        setClases((prev) =>
-          prev.map((c) =>
-            c.id === editing.id ? { ...c, nombre, multiplicadorTarifa, activo } : c
-          )
-        );
-      } else {
-        const nextId = clases.length ? Math.max(...clases.map((c) => c.id)) + 1 : 1;
-        setClases((prev) => [
-          ...prev,
-          { id: nextId, nombre, multiplicadorTarifa, activo: true }
-        ]);
-      }
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al guardar clase de asiento en la BD.');
     }
-    setShowModal(false);
   };
 
   return (
@@ -85,7 +75,7 @@ export default function ClasesAsientoPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Clases de Asiento</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Factores multiplicadores aplicados sobre el precio base del vuelo al emitir reservas.
+            Registros en vivo desde la tabla ClaseAsiento en Neon Cloud PostgreSQL (`GET /api/clasesasiento`).
           </p>
         </div>
         <button
@@ -97,6 +87,12 @@ export default function ClasesAsientoPage() {
           <span>Registrar Clase de Asiento</span>
         </button>
       </div>
+
+      {errorMsg && (
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+          {errorMsg}
+        </div>
+      )}
 
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -110,29 +106,39 @@ export default function ClasesAsientoPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 text-xs">
-            {clases.map((item) => (
-              <tr key={item.id} className="hover:bg-zinc-50">
-                <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
-                <td className="py-3 px-4 font-semibold text-[#18181B]">{item.nombre}</td>
-                <td className="py-3 px-4">
-                  <span className="font-mono-code font-bold px-2 py-0.5 rounded bg-sky-50 border border-sky-200 text-[#0284C7]">
-                    x{item.multiplicadorTarifa.toFixed(2)}
-                  </span>
-                </td>
-                <td className="py-3 px-4 font-mono-code text-emerald-700 font-semibold">
-                  ${(100 * item.multiplicadorTarifa).toFixed(2)} USD
-                </td>
-                <td className="py-3 px-4 text-right">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(item)}
-                    className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
-                  >
-                    Editar
-                  </button>
+            {clases.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="py-8 text-center text-zinc-500">
+                  {loading
+                    ? 'Consultando GET /api/clasesasiento...'
+                    : 'No hay clases de asiento registradas en la base de datos.'}
                 </td>
               </tr>
-            ))}
+            ) : (
+              clases.map((item) => (
+                <tr key={item.id} className="hover:bg-zinc-50">
+                  <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
+                  <td className="py-3 px-4 font-semibold text-[#18181B]">{item.nombre}</td>
+                  <td className="py-3 px-4">
+                    <span className="font-mono-code font-bold px-2 py-0.5 rounded bg-sky-50 border border-sky-200 text-[#0284C7]">
+                      x{item.multiplicadorTarifa.toFixed(2)}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 font-mono-code text-emerald-700 font-semibold">
+                    ${(100 * item.multiplicadorTarifa).toFixed(2)} USD
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(item)}
+                      className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
+                    >
+                      Editar
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

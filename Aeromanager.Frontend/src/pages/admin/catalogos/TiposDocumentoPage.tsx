@@ -4,6 +4,8 @@ import { TipoDocumentoDto } from '../../../types/models';
 
 export default function TiposDocumentoPage() {
   const [tipos, setTipos] = useState<TipoDocumentoDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<TipoDocumentoDto | null>(null);
   const [codigo, setCodigo] = useState('');
@@ -12,15 +14,15 @@ export default function TiposDocumentoPage() {
   const [activo, setActivo] = useState(true);
 
   const loadData = async () => {
+    setLoading(true);
+    setErrorMsg(null);
     try {
       const res = await axiosClient.get<TipoDocumentoDto[]>('/tiposdocumento');
       setTipos(res.data);
-    } catch {
-      setTipos([
-        { id: 1, codigo: 'DNI', nombre: 'Documento Nacional de Identidad', longitudMaxima: 8, activo: true },
-        { id: 2, codigo: 'PAS', nombre: 'Pasaporte Internacional', longitudMaxima: 12, activo: true },
-        { id: 3, codigo: 'CE', nombre: 'Carné de Extranjería', longitudMaxima: 9, activo: true }
-      ]);
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/tiposdocumento.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,6 +50,7 @@ export default function TiposDocumentoPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
     try {
       if (editing) {
         await axiosClient.put(`/tiposdocumento/${editing.id}`, {
@@ -60,23 +63,11 @@ export default function TiposDocumentoPage() {
       } else {
         await axiosClient.post('/tiposdocumento', { codigo, nombre, longitudMaxima });
       }
+      setShowModal(false);
       await loadData();
-    } catch {
-      if (editing) {
-        setTipos((prev) =>
-          prev.map((t) =>
-            t.id === editing.id ? { ...t, codigo, nombre, longitudMaxima, activo } : t
-          )
-        );
-      } else {
-        const nextId = tipos.length ? Math.max(...tipos.map((t) => t.id)) + 1 : 1;
-        setTipos((prev) => [
-          ...prev,
-          { id: nextId, codigo, nombre, longitudMaxima, activo: true }
-        ]);
-      }
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al guardar tipo de documento en la BD.');
     }
-    setShowModal(false);
   };
 
   return (
@@ -88,7 +79,7 @@ export default function TiposDocumentoPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Tipos de Documento</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Reglas de validación de longitud para registro de pasajeros en mostrador Counter.
+            Registros en vivo desde la tabla TipoDocumento en Neon Cloud PostgreSQL (`GET /api/tiposdocumento`).
           </p>
         </div>
         <button
@@ -100,6 +91,12 @@ export default function TiposDocumentoPage() {
           <span>Registrar Tipo de Documento</span>
         </button>
       </div>
+
+      {errorMsg && (
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+          {errorMsg}
+        </div>
+      )}
 
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -114,34 +111,44 @@ export default function TiposDocumentoPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 text-xs">
-            {tipos.map((item) => (
-              <tr key={item.id} className="hover:bg-zinc-50">
-                <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
-                <td className="py-3 px-4">
-                  <span className="font-mono-code font-bold px-2 py-0.5 rounded bg-sky-50 border border-sky-200 text-[#0284C7]">
-                    {item.codigo}
-                  </span>
-                </td>
-                <td className="py-3 px-4 font-semibold text-[#18181B]">{item.nombre}</td>
-                <td className="py-3 px-4 font-mono-code text-zinc-700">
-                  {item.longitudMaxima} caracteres
-                </td>
-                <td className="py-3 px-4">
-                  <span className="inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold bg-emerald-50 border-emerald-200 text-emerald-700">
-                    {item.activo ? 'Activo' : 'Inactivo'}
-                  </span>
-                </td>
-                <td className="py-3 px-4 text-right">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(item)}
-                    className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
-                  >
-                    Editar
-                  </button>
+            {tipos.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="py-8 text-center text-zinc-500">
+                  {loading
+                    ? 'Consultando GET /api/tiposdocumento...'
+                    : 'No hay tipos de documento registrados en la base de datos.'}
                 </td>
               </tr>
-            ))}
+            ) : (
+              tipos.map((item) => (
+                <tr key={item.id} className="hover:bg-zinc-50">
+                  <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
+                  <td className="py-3 px-4">
+                    <span className="font-mono-code font-bold px-2 py-0.5 rounded bg-sky-50 border border-sky-200 text-[#0284C7]">
+                      {item.codigo}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 font-semibold text-[#18181B]">{item.nombre}</td>
+                  <td className="py-3 px-4 font-mono-code text-zinc-700">
+                    {item.longitudMaxima} caracteres
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold bg-emerald-50 border-emerald-200 text-emerald-700">
+                      {item.activo ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(item)}
+                      className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
+                    >
+                      Editar
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

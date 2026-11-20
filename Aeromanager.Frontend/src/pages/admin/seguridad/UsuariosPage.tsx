@@ -4,23 +4,26 @@ import { UsuarioDto } from '../../../types/models';
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<UsuarioDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<UsuarioDto | null>(null);
   const [nombreCompleto, setNombreCompleto] = useState('');
   const [email, setEmail] = useState('');
-  const [passwordHash, setPasswordHash] = useState('Operador2026!');
+  const [password, setPassword] = useState('');
+  const [estadoAcceso, setEstadoAcceso] = useState('Activo');
   const [activo, setActivo] = useState(true);
 
   const loadData = async () => {
+    setLoading(true);
+    setErrorMsg(null);
     try {
       const res = await axiosClient.get<UsuarioDto[]>('/usuarios');
       setUsuarios(res.data);
-    } catch {
-      setUsuarios([
-        { id: 1, nombreCompleto: 'Josué Choque (Administrador General)', email: 'admin@aeromanager.com', fechaCreacion: '2026-11-01T09:00:00Z', activo: true },
-        { id: 2, nombreCompleto: 'Carlos Mendoza (Operador de Vuelos)', email: 'operador@aeromanager.com', fechaCreacion: '2026-11-02T10:30:00Z', activo: true },
-        { id: 3, nombreCompleto: 'Lucía Fernández (Agente Counter)', email: 'counter@aeromanager.com', fechaCreacion: '2026-11-03T11:15:00Z', activo: true }
-      ]);
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/usuarios.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -32,7 +35,8 @@ export default function UsuariosPage() {
     setEditing(null);
     setNombreCompleto('');
     setEmail('');
-    setPasswordHash('AeroManager2026!');
+    setPassword('');
+    setEstadoAcceso('Activo');
     setActivo(true);
     setShowModal(true);
   };
@@ -41,52 +45,37 @@ export default function UsuariosPage() {
     setEditing(item);
     setNombreCompleto(item.nombreCompleto);
     setEmail(item.email);
-    setPasswordHash('AeroManager2026!');
+    setPassword('');
+    setEstadoAcceso(item.estadoAcceso || 'Activo');
     setActivo(item.activo);
     setShowModal(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
     try {
       if (editing) {
         await axiosClient.put(`/usuarios/${editing.id}`, {
           id: editing.id,
           nombreCompleto,
           email,
-          passwordHash,
+          estadoAcceso,
           activo
         });
       } else {
         await axiosClient.post('/usuarios', {
           nombreCompleto,
           email,
-          passwordHash
+          password,
+          estadoAcceso
         });
       }
+      setShowModal(false);
       await loadData();
-    } catch {
-      if (editing) {
-        setUsuarios((prev) =>
-          prev.map((u) =>
-            u.id === editing.id ? { ...u, nombreCompleto, email, activo } : u
-          )
-        );
-      } else {
-        const nextId = usuarios.length ? Math.max(...usuarios.map((u) => u.id)) + 1 : 1;
-        setUsuarios((prev) => [
-          ...prev,
-          {
-            id: nextId,
-            nombreCompleto,
-            email,
-            fechaCreacion: new Date().toISOString(),
-            activo: true
-          }
-        ]);
-      }
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al guardar usuario en la BD.');
     }
-    setShowModal(false);
   };
 
   return (
@@ -98,7 +87,7 @@ export default function UsuariosPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Gestión de Usuarios</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Cuentas operativas habilitadas para autenticación JWT en consolas de Administrador, Operador y Counter.
+            Registros en vivo desde la tabla Usuario (`NombreCompleto`, `Email`, `EstadoAcceso`) en Neon Cloud PostgreSQL.
           </p>
         </div>
         <button
@@ -111,6 +100,12 @@ export default function UsuariosPage() {
         </button>
       </div>
 
+      {errorMsg && (
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+          {errorMsg}
+        </div>
+      )}
+
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -118,42 +113,52 @@ export default function UsuariosPage() {
               <th className="py-2.5 px-4 font-semibold">ID</th>
               <th className="py-2.5 px-4 font-semibold">Nombre Completo</th>
               <th className="py-2.5 px-4 font-semibold">Correo Institucional</th>
+              <th className="py-2.5 px-4 font-semibold">Estado Acceso</th>
               <th className="py-2.5 px-4 font-semibold">Fecha de Alta</th>
-              <th className="py-2.5 px-4 font-semibold">Estado</th>
               <th className="py-2.5 px-4 font-semibold text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 text-xs">
-            {usuarios.map((item) => (
-              <tr key={item.id} className="hover:bg-zinc-50">
-                <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
-                <td className="py-3 px-4 font-semibold text-[#18181B]">{item.nombreCompleto}</td>
-                <td className="py-3 px-4 font-mono-code text-[#0284C7]">{item.email}</td>
-                <td className="py-3 px-4 font-mono-code text-zinc-600">
-                  {new Date(item.fechaCreacion).toLocaleDateString('es-PE')}
-                </td>
-                <td className="py-3 px-4">
-                  <span
-                    className={`inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold ${
-                      item.activo
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                        : 'bg-red-50 border-red-200 text-red-700'
-                    }`}
-                  >
-                    {item.activo ? 'Activo' : 'Suspendido'}
-                  </span>
-                </td>
-                <td className="py-3 px-4 text-right">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(item)}
-                    className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
-                  >
-                    Editar
-                  </button>
+            {usuarios.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="py-8 text-center text-zinc-500">
+                  {loading
+                    ? 'Consultando GET /api/usuarios...'
+                    : 'No hay usuarios registrados en la base de datos.'}
                 </td>
               </tr>
-            ))}
+            ) : (
+              usuarios.map((item) => (
+                <tr key={item.id} className="hover:bg-zinc-50">
+                  <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
+                  <td className="py-3 px-4 font-semibold text-[#18181B]">{item.nombreCompleto}</td>
+                  <td className="py-3 px-4 font-mono-code text-[#0284C7]">{item.email}</td>
+                  <td className="py-3 px-4">
+                    <span
+                      className={`inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold ${
+                        item.activo
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                          : 'bg-red-50 border-red-200 text-red-700'
+                      }`}
+                    >
+                      {item.estadoAcceso || (item.activo ? 'Activo' : 'Inactivo')}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 font-mono-code text-zinc-600">
+                    {new Date(item.fechaCreacion).toLocaleDateString('es-PE')}
+                  </td>
+                  <td className="py-3 px-4 text-right">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(item)}
+                      className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
+                    >
+                      Editar
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -200,17 +205,33 @@ export default function UsuariosPage() {
                   className="w-full h-9 px-3 rounded border border-zinc-300 font-mono-code text-xs outline-none focus:border-[#0284C7]"
                 />
               </div>
+              {!editing && (
+                <div>
+                  <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
+                    Contraseña de Acceso
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full h-9 px-3 rounded border border-zinc-300 text-xs outline-none focus:border-[#0284C7]"
+                  />
+                </div>
+              )}
               <div>
                 <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
-                  Contraseña de Acceso (SHA-256)
+                  Estado de Acceso
                 </label>
-                <input
-                  type="password"
-                  required
-                  value={passwordHash}
-                  onChange={(e) => setPasswordHash(e.target.value)}
-                  className="w-full h-9 px-3 rounded border border-zinc-300 text-xs outline-none focus:border-[#0284C7]"
-                />
+                <select
+                  value={estadoAcceso}
+                  onChange={(e) => setEstadoAcceso(e.target.value)}
+                  className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
+                >
+                  <option value="Activo">Activo</option>
+                  <option value="Suspendido">Suspendido</option>
+                </select>
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t border-zinc-200">
                 <button

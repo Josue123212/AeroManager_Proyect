@@ -4,6 +4,8 @@ import { PaisDto } from '../../../types/models';
 
 export default function PaisesPage() {
   const [paises, setPaises] = useState<PaisDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<PaisDto | null>(null);
@@ -12,17 +14,15 @@ export default function PaisesPage() {
   const [activo, setActivo] = useState(true);
 
   const loadData = async () => {
+    setLoading(true);
+    setErrorMsg(null);
     try {
       const res = await axiosClient.get<PaisDto[]>('/paises');
       setPaises(res.data);
-    } catch {
-      setPaises([
-        { id: 1, nombre: 'Perú', codigoIso: 'PER', activo: true },
-        { id: 2, nombre: 'Colombia', codigoIso: 'COL', activo: true },
-        { id: 3, nombre: 'Chile', codigoIso: 'CHL', activo: true },
-        { id: 4, nombre: 'Estados Unidos', codigoIso: 'USA', activo: true },
-        { id: 5, nombre: 'España', codigoIso: 'ESP', activo: true }
-      ]);
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/paises.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,6 +48,7 @@ export default function PaisesPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg(null);
     const iso = codigoIso.trim().toUpperCase().slice(0, 3);
     try {
       if (editing) {
@@ -60,27 +61,25 @@ export default function PaisesPage() {
       } else {
         await axiosClient.post('/paises', { nombre, codigoIso: iso });
       }
+      setShowModal(false);
       await loadData();
-    } catch {
-      if (editing) {
-        setPaises((prev) =>
-          prev.map((p) => (p.id === editing.id ? { ...p, nombre, codigoIso: iso, activo } : p))
-        );
-      } else {
-        const nextId = paises.length ? Math.max(...paises.map((p) => p.id)) + 1 : 1;
-        setPaises((prev) => [...prev, { id: nextId, nombre, codigoIso: iso, activo: true }]);
-      }
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al guardar país en la base de datos.');
     }
-    setShowModal(false);
   };
 
   const handleToggleActivo = async (item: PaisDto) => {
-    const updated = { ...item, activo: !item.activo };
+    setErrorMsg(null);
     try {
-      await axiosClient.put(`/paises/${item.id}`, updated);
+      await axiosClient.put(`/paises/${item.id}`, {
+        id: item.id,
+        nombre: item.nombre,
+        codigoIso: item.codigoIso,
+        activo: !item.activo
+      });
       await loadData();
-    } catch {
-      setPaises((prev) => prev.map((p) => (p.id === item.id ? updated : p)));
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Error al actualizar estado del país.');
     }
   };
 
@@ -99,7 +98,7 @@ export default function PaisesPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Catálogo de Países (ISO-3166)</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Jurisdicciones soberanas para sedes aeroportuarias, aerolíneas y nacionalidad de pasajeros.
+            Registros en vivo desde la tabla Pais en Neon Cloud PostgreSQL (`GET /api/paises`).
           </p>
         </div>
         <button
@@ -111,6 +110,12 @@ export default function PaisesPage() {
           <span>Registrar Nuevo País</span>
         </button>
       </div>
+
+      {errorMsg && (
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+          {errorMsg}
+        </div>
+      )}
 
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <div className="p-4 bg-[#F4F4F5] border-b border-zinc-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -127,7 +132,7 @@ export default function PaisesPage() {
             />
           </div>
           <span className="font-mono-code text-xs text-zinc-600">
-            Total registros: <strong>{filtered.length}</strong>
+            Total en BD: <strong>{filtered.length}</strong>
           </span>
         </div>
 
@@ -142,44 +147,52 @@ export default function PaisesPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 text-xs">
-            {filtered.map((item) => (
-              <tr key={item.id} className="hover:bg-zinc-50">
-                <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
-                <td className="py-3 px-4">
-                  <span className="font-mono-code font-bold px-2 py-0.5 rounded bg-sky-50 border border-sky-200 text-[#0284C7]">
-                    {item.codigoIso}
-                  </span>
-                </td>
-                <td className="py-3 px-4 font-semibold text-[#18181B]">{item.nombre}</td>
-                <td className="py-3 px-4">
-                  <span
-                    className={`inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold ${
-                      item.activo
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                        : 'bg-red-50 border-red-200 text-red-700'
-                    }`}
-                  >
-                    {item.activo ? 'Activo' : 'Inactivo'}
-                  </span>
-                </td>
-                <td className="py-3 px-4 text-right space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(item)}
-                    className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleActivo(item)}
-                    className="px-2.5 py-1 rounded bg-red-50 hover:bg-red-100 text-red-700 font-medium cursor-pointer"
-                  >
-                    {item.activo ? 'Desactivar' : 'Reactivar'}
-                  </button>
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="py-8 text-center text-zinc-500">
+                  {loading ? 'Consultando GET /api/paises...' : 'No hay países registrados en la base de datos.'}
                 </td>
               </tr>
-            ))}
+            ) : (
+              filtered.map((item) => (
+                <tr key={item.id} className="hover:bg-zinc-50">
+                  <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
+                  <td className="py-3 px-4">
+                    <span className="font-mono-code font-bold px-2 py-0.5 rounded bg-sky-50 border border-sky-200 text-[#0284C7]">
+                      {item.codigoIso}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 font-semibold text-[#18181B]">{item.nombre}</td>
+                  <td className="py-3 px-4">
+                    <span
+                      className={`inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold ${
+                        item.activo
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                          : 'bg-red-50 border-red-200 text-red-700'
+                      }`}
+                    >
+                      {item.activo ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-right space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(item)}
+                      className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleActivo(item)}
+                      className="px-2.5 py-1 rounded bg-red-50 hover:bg-red-100 text-red-700 font-medium cursor-pointer"
+                    >
+                      {item.activo ? 'Desactivar' : 'Reactivar'}
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

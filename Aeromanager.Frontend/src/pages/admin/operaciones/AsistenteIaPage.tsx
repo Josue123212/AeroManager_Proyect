@@ -19,11 +19,11 @@ const SUGERENCIAS_OPERATIVAS = [
 export default function AsistenteIaPage() {
   const [pregunta, setPregunta] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
-      text: 'Bienvenido al Copilot Operativo AeroManager (impulsado por Google Gemini 2.0 Flash + Telemetría en vivo de Neon Cloud PostgreSQL). Selecciona una consulta rápida o escribe tu pregunta sobre el estado de vuelos, flota o reservas.',
-      contexto: 'Conectado a AskAiAssistantCommandHandler (/api/ai/consultar)',
+      text: 'Bienvenido al Copilot Operativo AeroManager. Todas las consultas se envían directamente a POST /api/ai/consultar (`AskAiAssistantCommandHandler` + `GeminiAiService`), inyectando la telemetría real en vivo de las tablas Vuelo, Avion y Reserva de Neon Cloud PostgreSQL.',
       timestamp: new Date().toLocaleTimeString('es-PE')
     }
   ]);
@@ -40,6 +40,7 @@ export default function AsistenteIaPage() {
     setMessages((prev) => [...prev, userMsg]);
     setPregunta('');
     setLoading(true);
+    setErrorMsg(null);
 
     try {
       const res = await axiosClient.post<AiAssistantResponseDto>('/ai/consultar', {
@@ -54,19 +55,11 @@ export default function AsistenteIaPage() {
           timestamp: new Date(res.data.fechaConsulta).toLocaleTimeString('es-PE')
         }
       ]);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          text:
-            `[Copilot Operativo AeroManager — Telemetría Neon Cloud]\n` +
-            `• Respuesta a "${clean}": Se recomienda priorizar la apertura de puertas de embarque (Gates) 45 minutos antes de la salida programada y verificar que los asientos en estado Disponible en AsientoVuelo mantengan bloqueo transaccional UnitOfWork activo durante el turno.`,
-          contexto:
-            'Total Vuelos Registrados: 4 (Activos: 4). Flota de Aviones: 4 (Operativos: 3). Reservas Emitidas: 3 (Facturación Acumulada: $885.00 USD).',
-          timestamp: new Date().toLocaleTimeString('es-PE')
-        }
-      ]);
+    } catch (err: any) {
+      setErrorMsg(
+        err.response?.data?.message ||
+          'No se pudo contactar POST /api/ai/consultar en Aeromanager.Api.'
+      );
     } finally {
       setLoading(false);
     }
@@ -93,9 +86,15 @@ export default function AsistenteIaPage() {
           </p>
         </div>
         <span className="font-mono-code text-xs px-3 py-1.5 rounded bg-sky-50 border border-sky-200 text-[#0284C7] font-semibold">
-          Adapter: GeminiAiService
+          Endpoint: POST /api/ai/consultar
         </span>
       </div>
+
+      {errorMsg && (
+        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
+          {errorMsg}
+        </div>
+      )}
 
       {/* Chips de Sugerencias Rápidas */}
       <div className="bg-white border border-zinc-200 rounded-xl p-4 shadow-2xs">
@@ -126,7 +125,7 @@ export default function AsistenteIaPage() {
             </span>
           </div>
           <span className="font-mono-code text-[11px] text-emerald-700">
-            Contexto BD Inyectado Automáticamente
+            Contexto BD Inyectado Automáticamente por AskAiAssistantCommandHandler
           </span>
         </div>
 
@@ -148,7 +147,7 @@ export default function AsistenteIaPage() {
                 <div>{m.text}</div>
                 {m.contexto && (
                   <div className="mt-2.5 pt-2 border-t border-zinc-300/80 font-mono-code text-[11px] text-zinc-600">
-                    <strong>Telemetría Analizada:</strong> {m.contexto}
+                    <strong>Telemetría Real de Neon DB:</strong> {m.contexto}
                   </div>
                 )}
               </div>
@@ -159,7 +158,7 @@ export default function AsistenteIaPage() {
           ))}
           {loading && (
             <div className="text-xs font-mono-code text-[#0284C7] animate-pulse">
-              Analizando telemetría de Neon Cloud PostgreSQL con Gemini IA...
+              Consultando POST /api/ai/consultar en Aeromanager.Api...
             </div>
           )}
         </div>

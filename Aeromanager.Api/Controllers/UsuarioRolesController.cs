@@ -2,12 +2,14 @@ using Aeromanager.Application.DTOs;
 using Aeromanager.Application.UseCases.UsuarioRoles.Commands;
 using Aeromanager.Application.UseCases.UsuarioRoles.Queries;
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Aeromanager.Api.Controllers;
 
 [ApiController]
 [Route("api/usuarioroles")]
+[Authorize(Roles = "SuperAdmin,Administrador")]
 public class UsuarioRolesController(
     GetUsuarioRolesQueryHandler queryHandler,
     CreateUsuarioRolCommandHandler createHandler,
@@ -48,7 +50,8 @@ public class UsuarioRolesController(
             return ValidationProblem(ModelState);
         }
 
-        var item = await createHandler.Handle(command);
+        var callerIsSuperAdmin = User.IsInRole("SuperAdmin");
+        var item = await createHandler.Handle(command, callerIsSuperAdmin);
         return CreatedAtAction(nameof(GetById), new { id = item.Id }, item);
     }
 
@@ -56,7 +59,8 @@ public class UsuarioRolesController(
     public async Task<ActionResult<UsuarioRolDto>> Update(
         int id, UpdateUsuarioRolCommand command)
     {
-        var item = await updateHandler.Handle(command with { Id = id });
+        var callerIsSuperAdmin = User.IsInRole("SuperAdmin");
+        var item = await updateHandler.Handle(command with { Id = id }, callerIsSuperAdmin);
         if (item is null)
         {
             return NotFound();

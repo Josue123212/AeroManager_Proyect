@@ -17,6 +17,7 @@ interface StoredUser {
 
 export function getHomePathForRoles(roles: string[]): string {
   const normalized = roles.map((r) => r.trim().toLowerCase());
+  if (normalized.some((r) => r === 'superadmin')) return '/superadmin/dashboard';
   if (normalized.some((r) => r.includes('admin'))) return '/admin/dashboard';
   if (normalized.some((r) => r.includes('operador'))) return '/operador/fids';
   if (normalized.some((r) => r.includes('counter'))) return '/counter/cartelera';
@@ -46,7 +47,7 @@ export default function ProtectedRoute({ allowedRoles, children }: ProtectedRout
   }
 
   const hasPermission = allowedRoles.some((allowed) =>
-    userRoles.some((ur) => ur.toLowerCase().includes(allowed.toLowerCase()))
+    userRoles.some((ur) => ur.trim().toLowerCase() === allowed.trim().toLowerCase())
   );
 
   if (!hasPermission) {

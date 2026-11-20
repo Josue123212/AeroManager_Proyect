@@ -13,6 +13,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 // Configurar OpenAPI
 builder.Services.AddOpenApi();
+builder.Services.AddAuthorization();
 
 // Configurar CORS
 builder.Services.AddCors(options =>
@@ -46,6 +47,10 @@ app.UseHttpsRedirection();
 
 // Habilitar CORS
 app.UseCors("AllowFrontend");
+
+// Autenticación JWT y autorización
+app.UseMiddleware<JwtAuthMiddleware>();
+app.UseAuthorization();
 
 // Mapear controladores
 app.MapControllers();

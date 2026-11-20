@@ -27,7 +27,10 @@ public class CreateUsuarioRolCommandHandler
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<UsuarioRolDto> Handle(CreateUsuarioRolCommand command, CancellationToken cancellationToken = default)
+    public async Task<UsuarioRolDto> Handle(
+        CreateUsuarioRolCommand command,
+        bool callerIsSuperAdmin = false,
+        CancellationToken cancellationToken = default)
     {
         var rol = await _rolRepository.GetByIdAsync(command.RolId);
         if (rol is null)
@@ -35,11 +38,19 @@ public class CreateUsuarioRolCommandHandler
             throw new KeyNotFoundException($"No se encontró el rol con ID {command.RolId}.");
         }
 
-        if (rol.Nombre.Trim().Contains("Administrador", StringComparison.OrdinalIgnoreCase))
+        if (rol.Nombre.Trim().Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase))
         {
             throw new ValidationException(new[]
             {
-                new ValidationFailure(nameof(command.RolId), "No está permitido asignar el rol Administrador desde la aplicación operativa.")
+                new ValidationFailure(nameof(command.RolId), "El rol SuperAdmin es exclusivo de sistema y no puede asignarse desde la aplicación.")
+            });
+        }
+
+        if (rol.Nombre.Trim().Contains("Administrador", StringComparison.OrdinalIgnoreCase) && !callerIsSuperAdmin)
+        {
+            throw new ValidationException(new[]
+            {
+                new ValidationFailure(nameof(command.RolId), "Solo un SuperAdmin puede asignar el rol Administrador.")
             });
         }
 

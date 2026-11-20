@@ -222,4 +222,4 @@ export interface AiAssistantResponseDto {
   fechaConsulta: string;
 }
 
-export type RolActivoType = 'Administrador' | 'Operador' | 'Counter';
+export type RolActivoType = 'SuperAdmin' | 'Administrador' | 'Operador' | 'Counter';

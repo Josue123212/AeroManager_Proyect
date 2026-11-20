@@ -5,6 +5,10 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminHeader from './components/layout/AdminHeader';
 import OperatorSidebar from './components/layout/OperatorSidebar';
 import CounterNavbar from './components/layout/CounterNavbar';
+import SuperAdminHeader from './components/layout/SuperAdminHeader';
+import SuperAdminDashboardPage from './pages/superadmin/SuperAdminDashboardPage';
+import SuperAdminUsuariosPage from './pages/superadmin/SuperAdminUsuariosPage';
+import SuperAdminRolesPermisosPage from './pages/superadmin/SuperAdminRolesPermisosPage';
 import DashboardEjecutivoPage from './pages/admin/DashboardEjecutivoPage';
 import PaisesPage from './pages/admin/catalogos/PaisesPage';
 import CiudadesPage from './pages/admin/catalogos/CiudadesPage';
@@ -37,6 +41,21 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/superadmin/*"
+        element={
+          <ProtectedRoute allowedRoles={['SuperAdmin']}>
+            <SuperAdminHeader>
+              <Routes>
+                <Route path="dashboard" element={<SuperAdminDashboardPage />} />
+                <Route path="usuarios" element={<SuperAdminUsuariosPage />} />
+                <Route path="roles-permisos" element={<SuperAdminRolesPermisosPage />} />
+                <Route path="*" element={<SuperAdminDashboardPage />} />
+              </Routes>
+            </SuperAdminHeader>
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/admin/*"
         element={

@@ -3,14 +3,17 @@ using Aeromanager.Application.DTOs;
 using Aeromanager.Application.UseCases.Usuarios.Commands;
 using Aeromanager.Application.UseCases.Usuarios.Queries;
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 
 namespace Aeromanager.Api.Controllers;
 
 [ApiController]
 [Route("api/usuarios")]
+[Authorize(Roles = "SuperAdmin,Administrador")]
 public class UsuariosController(
     GetUsuariosQueryHandler queryHandler,
     CreateUsuarioCommandHandler createHandler,
@@ -61,6 +64,12 @@ public class UsuariosController(
     public async Task<ActionResult<UsuarioDto>> Update(
         int id, UpdateUsuarioCommand command)
     {
+        var currentUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (int.TryParse(currentUserIdClaim, out var currentUserId) && currentUserId == id && !command.Activo)
+        {
+            return BadRequest(new { message = "No puedes desactivar tu propia cuenta en sesión." });
+        }
+
         var item = await updateHandler.Handle(command with { Id = id });
         if (item is null)
         {

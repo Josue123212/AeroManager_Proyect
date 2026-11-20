@@ -13,7 +13,8 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const resolvePrimaryRole = (roles: string[]): RolActivoType => {
-    const normalized = roles.map((r) => r.toLowerCase());
+    const normalized = roles.map((r) => r.trim().toLowerCase());
+    if (normalized.some((r) => r === 'superadmin')) return 'SuperAdmin';
     if (normalized.some((r) => r.includes('admin'))) return 'Administrador';
     if (normalized.some((r) => r.includes('operador'))) return 'Operador';
     return 'Counter';

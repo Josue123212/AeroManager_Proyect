@@ -2,12 +2,14 @@ using Aeromanager.Application.DTOs;
 using Aeromanager.Application.UseCases.Roles.Commands;
 using Aeromanager.Application.UseCases.Roles.Queries;
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Aeromanager.Api.Controllers;
 
 [ApiController]
 [Route("api/roles")]
+[Authorize(Roles = "SuperAdmin,Administrador")]
 public class RolesController(
     GetRolesQueryHandler queryHandler,
     CreateRolCommandHandler createHandler,
@@ -34,6 +36,7 @@ public class RolesController(
     }
 
     [HttpPost]
+    [Authorize(Roles = "SuperAdmin")]
     public async Task<ActionResult<RolDto>> Create(
         CreateRolCommand command)
     {
@@ -53,6 +56,7 @@ public class RolesController(
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = "SuperAdmin")]
     public async Task<ActionResult<RolDto>> Update(
         int id, UpdateRolCommand command)
     {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import LoginPage from './pages/auth/LoginPage';
+import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminHeader from './components/layout/AdminHeader';
 import OperatorSidebar from './components/layout/OperatorSidebar';
 import CounterNavbar from './components/layout/CounterNavbar';
@@ -39,57 +40,63 @@ export default function App() {
       <Route
         path="/admin/*"
         element={
-          <AdminHeader>
-            <Routes>
-              <Route path="dashboard" element={<DashboardEjecutivoPage />} />
-              <Route path="paises" element={<PaisesPage />} />
-              <Route path="ciudades" element={<CiudadesPage />} />
-              <Route path="tipos-documento" element={<TiposDocumentoPage />} />
-              <Route path="aeropuertos" element={<AeropuertosPage />} />
-              <Route path="terminales" element={<TerminalesPage />} />
-              <Route path="puertas-embarque" element={<PuertasEmbarquePage />} />
-              <Route path="aerolineas" element={<AerolineasPage />} />
-              <Route path="modelos-avion" element={<ModelosAvionPage />} />
-              <Route path="aviones" element={<AvionesPage />} />
-              <Route path="clases-asiento" element={<ClasesAsientoPage />} />
-              <Route path="asientos" element={<AsientosPage />} />
-              <Route path="usuarios" element={<UsuariosPage />} />
-              <Route path="roles-permisos" element={<RolesPermisosPage />} />
-              <Route path="reportes-excel" element={<ReportesExcelPage />} />
-              <Route path="asistente-ia" element={<AsistenteIaPage />} />
-              <Route path="*" element={<DashboardEjecutivoPage />} />
-            </Routes>
-          </AdminHeader>
+          <ProtectedRoute allowedRoles={['Administrador']}>
+            <AdminHeader>
+              <Routes>
+                <Route path="dashboard" element={<DashboardEjecutivoPage />} />
+                <Route path="paises" element={<PaisesPage />} />
+                <Route path="ciudades" element={<CiudadesPage />} />
+                <Route path="tipos-documento" element={<TiposDocumentoPage />} />
+                <Route path="aeropuertos" element={<AeropuertosPage />} />
+                <Route path="terminales" element={<TerminalesPage />} />
+                <Route path="puertas-embarque" element={<PuertasEmbarquePage />} />
+                <Route path="aerolineas" element={<AerolineasPage />} />
+                <Route path="modelos-avion" element={<ModelosAvionPage />} />
+                <Route path="aviones" element={<AvionesPage />} />
+                <Route path="clases-asiento" element={<ClasesAsientoPage />} />
+                <Route path="asientos" element={<AsientosPage />} />
+                <Route path="usuarios" element={<UsuariosPage />} />
+                <Route path="roles-permisos" element={<RolesPermisosPage />} />
+                <Route path="reportes-excel" element={<ReportesExcelPage />} />
+                <Route path="asistente-ia" element={<AsistenteIaPage />} />
+                <Route path="*" element={<DashboardEjecutivoPage />} />
+              </Routes>
+            </AdminHeader>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/operador/*"
         element={
-          <OperatorSidebar>
-            <Routes>
-              <Route path="fids" element={<MonitorFidsPage />} />
-              <Route path="rutas" element={<RutasOperadorPage />} />
-              <Route path="vuelos" element={<ProgramacionVuelosPage />} />
-              <Route path="cabina" element={<DisponibilidadCabinaPage />} />
-              <Route path="gates" element={<MonitorGatesPage />} />
-              <Route path="flota" element={<FlotaOperativaPage />} />
-              <Route path="*" element={<MonitorFidsPage />} />
-            </Routes>
-          </OperatorSidebar>
+          <ProtectedRoute allowedRoles={['Operador']}>
+            <OperatorSidebar>
+              <Routes>
+                <Route path="fids" element={<MonitorFidsPage />} />
+                <Route path="rutas" element={<RutasOperadorPage />} />
+                <Route path="vuelos" element={<ProgramacionVuelosPage />} />
+                <Route path="cabina" element={<DisponibilidadCabinaPage />} />
+                <Route path="gates" element={<MonitorGatesPage />} />
+                <Route path="flota" element={<FlotaOperativaPage />} />
+                <Route path="*" element={<MonitorFidsPage />} />
+              </Routes>
+            </OperatorSidebar>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/counter/*"
         element={
-          <CounterNavbar>
-            <Routes>
-              <Route path="cartelera" element={<CarteleraVuelosCounterPage />} />
-              <Route path="cabina" element={<MapaCabinaReservaPage />} />
-              <Route path="pasajeros" element={<PadronPasajerosCounterPage />} />
-              <Route path="tickets" element={<HistorialTicketsCounterPage />} />
-              <Route path="*" element={<CarteleraVuelosCounterPage />} />
-            </Routes>
-          </CounterNavbar>
+          <ProtectedRoute allowedRoles={['Counter']}>
+            <CounterNavbar>
+              <Routes>
+                <Route path="cartelera" element={<CarteleraVuelosCounterPage />} />
+                <Route path="cabina" element={<MapaCabinaReservaPage />} />
+                <Route path="pasajeros" element={<PadronPasajerosCounterPage />} />
+                <Route path="tickets" element={<HistorialTicketsCounterPage />} />
+                <Route path="*" element={<CarteleraVuelosCounterPage />} />
+              </Routes>
+            </CounterNavbar>
+          </ProtectedRoute>
         }
       />
       <Route path="*" element={<Navigate to="/login" replace />} />

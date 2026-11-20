@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { AsientoDto, AvionDto, ClaseAsientoDto } from '../../../types/models';
 
 export default function AsientosPage() {
@@ -29,7 +29,7 @@ export default function AsientosPage() {
       setAviones(avRes.data);
       setClases(clRes.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/asientos.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ export default function AsientosPage() {
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al guardar asiento en la BD.');
+      setErrorMsg(extractApiError(err, 'Error al guardar asiento.'));
     }
   };
 
@@ -103,7 +103,7 @@ export default function AsientosPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Configuración de Asientos</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Registros en vivo desde la tabla Asiento (`Fila`, `Letra`, `AvionId`, `ClaseAsientoId`) en Neon Cloud PostgreSQL.
+            Registros en vivo.
           </p>
         </div>
         <button
@@ -140,8 +140,8 @@ export default function AsientosPage() {
               <tr>
                 <td colSpan={7} className="py-8 text-center text-zinc-500">
                   {loading
-                    ? 'Consultando GET /api/asientos...'
-                    : 'No hay asientos registrados en la base de datos.'}
+                    ? 'Cargando información...'
+                    : 'No hay asientos registrados.'}
                 </td>
               </tr>
             ) : (

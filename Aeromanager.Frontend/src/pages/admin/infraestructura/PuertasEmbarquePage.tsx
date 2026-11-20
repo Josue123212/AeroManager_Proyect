@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { PuertaEmbarqueDto, TerminalDto } from '../../../types/models';
 
 export default function PuertasEmbarquePage() {
@@ -25,7 +25,7 @@ export default function PuertasEmbarquePage() {
       setPuertas(pRes.data);
       setTerminales(tRes.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/puertasembarque.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -71,7 +71,7 @@ export default function PuertasEmbarquePage() {
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al guardar puerta de embarque en la BD.');
+      setErrorMsg(extractApiError(err, 'Error al guardar puerta de embarque.'));
     }
   };
 
@@ -95,7 +95,7 @@ export default function PuertasEmbarquePage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Puertas de Embarque (Gates)</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Registros en vivo desde la tabla PuertaEmbarque en Neon Cloud PostgreSQL (`GET /api/puertasembarque`).
+            Registros en vivo.
           </p>
         </div>
         <button
@@ -130,8 +130,8 @@ export default function PuertasEmbarquePage() {
               <tr>
                 <td colSpan={5} className="py-8 text-center text-zinc-500">
                   {loading
-                    ? 'Consultando GET /api/puertasembarque...'
-                    : 'No hay puertas de embarque registradas en la base de datos.'}
+                    ? 'Cargando información...'
+                    : 'No hay puertas de embarque registradas.'}
                 </td>
               </tr>
             ) : (

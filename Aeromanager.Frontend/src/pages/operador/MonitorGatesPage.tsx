@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../api/axiosClient';
 import {
   AeropuertoDto,
   PuertaEmbarqueDto,
@@ -34,7 +34,7 @@ export default function MonitorGatesPage() {
       setAeropuertos(aRes.data);
       setVuelos(vRes.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/puertasembarque.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -56,7 +56,7 @@ export default function MonitorGatesPage() {
       });
       await loadData();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al cambiar estado de la puerta (Gate).');
+      setErrorMsg(extractApiError(err, 'Error al cambiar estado de la puerta (Gate).'));
     }
   };
 
@@ -210,8 +210,8 @@ export default function MonitorGatesPage() {
       {puertasActivas.length === 0 ? (
         <div className="p-8 bg-white border border-zinc-200 rounded-xl text-center text-xs text-zinc-500">
           {loading
-            ? 'Consultando GET /api/puertasembarque...'
-            : 'No hay puertas de embarque registradas en la base de datos.'}
+            ? 'Cargando información...'
+            : 'No hay puertas de embarque registradas.'}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -272,7 +272,7 @@ export default function MonitorGatesPage() {
                   </div>
                 </div>
 
-                {/* Botones rápidos de cambio de estado en PUT /api/puertasembarque/{id} */}
+                {/* Botones rápidos de cambio de estado en Sistema AeroManager{id} */}
                 <div className="pt-2 border-t border-zinc-100 flex items-center justify-between gap-1.5">
                   {['Disponible', 'En Abordaje', 'Mantenimiento'].map((st) => (
                     <button

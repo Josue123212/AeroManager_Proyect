@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { ClaseAsientoDto } from '../../../types/models';
 
 export default function ClasesAsientoPage() {
@@ -19,7 +19,7 @@ export default function ClasesAsientoPage() {
       const res = await axiosClient.get<ClaseAsientoDto[]>('/clasesasiento');
       setClases(res.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/clasesasiento.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -62,7 +62,7 @@ export default function ClasesAsientoPage() {
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al guardar clase de asiento en la BD.');
+      setErrorMsg(extractApiError(err, 'Error al guardar clase de asiento.'));
     }
   };
 
@@ -75,7 +75,7 @@ export default function ClasesAsientoPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Clases de Asiento</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Registros en vivo desde la tabla ClaseAsiento en Neon Cloud PostgreSQL (`GET /api/clasesasiento`).
+            Registros en vivo.
           </p>
         </div>
         <button
@@ -110,8 +110,8 @@ export default function ClasesAsientoPage() {
               <tr>
                 <td colSpan={5} className="py-8 text-center text-zinc-500">
                   {loading
-                    ? 'Consultando GET /api/clasesasiento...'
-                    : 'No hay clases de asiento registradas en la base de datos.'}
+                    ? 'Cargando información...'
+                    : 'No hay clases de asiento registradas.'}
                 </td>
               </tr>
             ) : (

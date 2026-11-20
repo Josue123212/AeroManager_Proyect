@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { ModeloAvionDto } from '../../../types/models';
 
 export default function ModelosAvionPage() {
@@ -21,7 +21,7 @@ export default function ModelosAvionPage() {
       const res = await axiosClient.get<ModeloAvionDto[]>('/modelosavion');
       setModelos(res.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/modelosavion.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -75,7 +75,7 @@ export default function ModelosAvionPage() {
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al guardar modelo de avión en la BD.');
+      setErrorMsg(extractApiError(err, 'Error al guardar modelo de avión.'));
     }
   };
 
@@ -88,7 +88,7 @@ export default function ModelosAvionPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Modelos de Avión</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Registros en vivo desde la tabla ModeloAvion (`CapacidadTeorica` y `AutonomiaKm` en Neon Cloud PostgreSQL).
+            Registros en vivo desde la tabla ModeloAvion (`CapacidadTeorica` y `AutonomiaKm`).
           </p>
         </div>
         <button
@@ -124,8 +124,8 @@ export default function ModelosAvionPage() {
               <tr>
                 <td colSpan={6} className="py-8 text-center text-zinc-500">
                   {loading
-                    ? 'Consultando GET /api/modelosavion...'
-                    : 'No hay modelos de avión registrados en la base de datos.'}
+                    ? 'Cargando información...'
+                    : 'No hay modelos de avión registrados.'}
                 </td>
               </tr>
             ) : (

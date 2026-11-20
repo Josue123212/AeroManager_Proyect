@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../api/axiosClient';
 import {
   AeropuertoDto,
   AsientoVueloDto,
@@ -62,7 +62,7 @@ export default function ProgramacionVuelosPage() {
       setTerminales(tRes.data);
       setAsientosVuelo(avuRes.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/vuelos.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -125,7 +125,7 @@ export default function ProgramacionVuelosPage() {
     const sta = new Date(fechaHoraLlegada);
     if (sta <= std) {
       setErrorMsg(
-        'Regla Cronológica Obligatoria (VueloDomainService): La fecha y hora de llegada debe ser estrictamente posterior a la fecha y hora de salida.'
+        'Regla Cronológica Obligatoria: La fecha y hora de llegada debe ser estrictamente posterior a la fecha y hora de salida.'
       );
       return;
     }
@@ -162,7 +162,7 @@ export default function ProgramacionVuelosPage() {
       await loadData();
     } catch (err: any) {
       setErrorMsg(
-        err.response?.data?.message || 'Error al guardar la programación del vuelo en la BD.'
+        extractApiError(err, 'Error al guardar la programación del vuelo.')
       );
     }
   };
@@ -181,7 +181,7 @@ export default function ProgramacionVuelosPage() {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al exportar reporte de vuelos (.xls).');
+      setErrorMsg(extractApiError(err, 'Error al exportar reporte de vuelos (.xls).'));
     }
   };
 
@@ -236,7 +236,7 @@ export default function ProgramacionVuelosPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Programación de Vuelos</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Cronograma de salidas (STD) y llegadas (STA) validado por VueloDomainService en Neon
+            Cronograma de salidas (STD) y llegadas (STA) en Neon
             Cloud PostgreSQL.
           </p>
         </div>
@@ -324,8 +324,8 @@ export default function ProgramacionVuelosPage() {
               <tr>
                 <td colSpan={10} className="py-8 text-center text-zinc-500">
                   {loading
-                    ? 'Consultando GET /api/vuelos...'
-                    : 'No hay vuelos programados en la base de datos.'}
+                    ? 'Cargando información...'
+                    : 'No hay vuelos programados.'}
                 </td>
               </tr>
             ) : (
@@ -425,7 +425,7 @@ export default function ProgramacionVuelosPage() {
 
             <form onSubmit={handleSave} className="p-5 space-y-4">
               <div className="p-3 rounded-lg bg-sky-50 border border-sky-200 text-sky-900 text-xs">
-                <strong>Regla Cronológica Obligatoria (VueloDomainService):</strong> La fecha y hora
+                <strong>Regla Cronológica Obligatoria:</strong> La fecha y hora
                 de llegada debe ser estrictamente posterior a la fecha y hora de salida. La capacidad
                 y precio base deben ser mayores a cero.
               </div>

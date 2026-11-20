@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axiosClient from '../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../api/axiosClient';
 import {
   DetalleReservaDto,
   PaisDto,
@@ -46,7 +46,7 @@ export default function PadronPasajerosCounterPage() {
       setPaises(paRes.data);
       setDetallesReserva(drRes.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/pasajeros.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -121,7 +121,7 @@ export default function PadronPasajerosCounterPage() {
       }
     } catch (err: any) {
       setErrorMsg(
-        err.response?.data?.message || 'Error al guardar los datos del pasajero en la BD.'
+        extractApiError(err, 'Error al guardar los datos del pasajero.')
       );
     }
   };
@@ -156,7 +156,7 @@ export default function PadronPasajerosCounterPage() {
             Padrón General de Pasajeros en Mostrador
           </h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Registro e identificación de pasajeros vinculados a TipoDocumento y Pais en Neon Cloud
+            Registro e identificación de pasajeros vinculados a TipoDocumento y Pais
             PostgreSQL.
           </p>
         </div>
@@ -203,7 +203,7 @@ export default function PadronPasajerosCounterPage() {
             </select>
           </div>
           <span className="font-mono-code text-xs text-zinc-600">
-            Pasajeros en Neon DB: <strong>{filtered.length}</strong>
+            Pasajeros: <strong>{filtered.length}</strong>
           </span>
         </div>
 
@@ -225,8 +225,8 @@ export default function PadronPasajerosCounterPage() {
               <tr>
                 <td colSpan={7} className="py-8 text-center text-zinc-500">
                   {loading
-                    ? 'Consultando GET /api/pasajeros...'
-                    : 'No hay pasajeros registrados en la base de datos.'}
+                    ? 'Cargando información...'
+                    : 'No hay pasajeros registrados.'}
                 </td>
               </tr>
             ) : (

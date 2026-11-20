@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { PaisDto } from '../../../types/models';
 
 export default function PaisesPage() {
@@ -20,7 +20,7 @@ export default function PaisesPage() {
       const res = await axiosClient.get<PaisDto[]>('/paises');
       setPaises(res.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/paises.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -64,7 +64,7 @@ export default function PaisesPage() {
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al guardar país en la base de datos.');
+      setErrorMsg(extractApiError(err, 'Error al guardar país.'));
     }
   };
 
@@ -79,7 +79,7 @@ export default function PaisesPage() {
       });
       await loadData();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al actualizar estado del país.');
+      setErrorMsg(extractApiError(err, 'Error al actualizar estado del país.'));
     }
   };
 
@@ -98,7 +98,7 @@ export default function PaisesPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Catálogo de Países (ISO-3166)</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Registros en vivo desde la tabla Pais en Neon Cloud PostgreSQL (`GET /api/paises`).
+            Registros en vivo.
           </p>
         </div>
         <button
@@ -132,7 +132,7 @@ export default function PaisesPage() {
             />
           </div>
           <span className="font-mono-code text-xs text-zinc-600">
-            Total en BD: <strong>{filtered.length}</strong>
+            Total: <strong>{filtered.length}</strong>
           </span>
         </div>
 
@@ -150,7 +150,7 @@ export default function PaisesPage() {
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={5} className="py-8 text-center text-zinc-500">
-                  {loading ? 'Consultando GET /api/paises...' : 'No hay países registrados en la base de datos.'}
+                  {loading ? 'Cargando información...' : 'No hay países registrados.'}
                 </td>
               </tr>
             ) : (

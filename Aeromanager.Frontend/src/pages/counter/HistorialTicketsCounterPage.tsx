@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../api/axiosClient';
 import {
   AeropuertoDto,
   AsientoDto,
@@ -87,7 +87,7 @@ export default function HistorialTicketsCounterPage() {
       setAsientos(asiRes.data);
       setClases(claRes.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/reservas.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -155,7 +155,7 @@ export default function HistorialTicketsCounterPage() {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al exportar reporte de reservas (.xls).');
+      setErrorMsg(extractApiError(err, 'Error al exportar reporte de reservas (.xls).'));
     }
   };
 
@@ -205,8 +205,7 @@ export default function HistorialTicketsCounterPage() {
       await loadData();
     } catch (err: any) {
       setErrorMsg(
-        err.response?.data?.message ||
-          'Error al ejecutar la anulación lógica (SoftDelete) y liberación de asiento.'
+        extractApiError(err, 'Error al ejecutar la anulación lógica (SoftDelete) y liberación de asiento.')
       );
     } finally {
       setCanceling(false);
@@ -332,8 +331,8 @@ export default function HistorialTicketsCounterPage() {
               <tr>
                 <td colSpan={9} className="py-8 text-center text-zinc-500">
                   {loading
-                    ? 'Consultando GET /api/reservas...'
-                    : 'No hay tickets emitidos en la base de datos.'}
+                    ? 'Cargando información...'
+                    : 'No hay tickets emitidos.'}
                 </td>
               </tr>
             ) : (
@@ -635,9 +634,9 @@ export default function HistorialTicketsCounterPage() {
                   <div className="p-3.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 leading-relaxed">
                     <strong>Aviso de Auditoría y Regla de Negocio (SoftDelete):</strong> La reserva
                     pasará a estado <strong>«Cancelada» (`Activo = false`)</strong> mediante borrado
-                    lógico para preservar la trazabilidad histórica en Neon Cloud PostgreSQL. El
-                    asiento en <code className="font-mono-code">AsientoVuelo</code> se actualizará
-                    instantáneamente a <strong>`EstaOcupado = false` (`Disponible`)</strong> para
+                    lógico para preservar la trazabilidad histórica. El
+                    asiento en el vuelo se actualizará
+                    instantáneamente a <strong>Libre (`Disponible`)</strong> para
                     que otro pasajero pueda reservarlo.
                   </div>
 
@@ -655,7 +654,7 @@ export default function HistorialTicketsCounterPage() {
                       onClick={handleConfirmCancelSoftDelete}
                       className="h-9 px-5 rounded bg-red-600 hover:bg-red-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-50"
                     >
-                      {canceling ? 'Liberando asiento en Neon DB...' : 'Confirmar y Liberar'}
+                      {canceling ? 'Liberando asiento...' : 'Confirmar y Liberar'}
                     </button>
                   </div>
                 </div>

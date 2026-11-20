@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { AeropuertoDto, TerminalDto } from '../../../types/models';
 
 export default function TerminalesPage() {
@@ -25,7 +25,7 @@ export default function TerminalesPage() {
       setTerminales(tRes.data);
       setAeropuertos(aRes.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/terminales.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -71,7 +71,7 @@ export default function TerminalesPage() {
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al guardar terminal en la BD.');
+      setErrorMsg(extractApiError(err, 'Error al guardar terminal.'));
     }
   };
 
@@ -89,7 +89,7 @@ export default function TerminalesPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Terminales Aeroportuarias</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Registros en vivo desde la tabla Terminal en Neon Cloud PostgreSQL (`GET /api/terminales`).
+            Registros en vivo.
           </p>
         </div>
         <button
@@ -125,8 +125,8 @@ export default function TerminalesPage() {
               <tr>
                 <td colSpan={6} className="py-8 text-center text-zinc-500">
                   {loading
-                    ? 'Consultando GET /api/terminales...'
-                    : 'No hay terminales registradas en la base de datos.'}
+                    ? 'Cargando información...'
+                    : 'No hay terminales registradas.'}
                 </td>
               </tr>
             ) : (

@@ -21,7 +21,10 @@ export default function OperatorSidebar({ children }: OperatorSidebarProps) {
   const storedUser = localStorage.getItem('aeromanager_user');
   const user = storedUser
     ? JSON.parse(storedUser)
-    : { nombreCompleto: 'Operador de Vuelos', rolActivo: 'Operador' };
+    : { nombreCompleto: 'Operador de Vuelos', rolActivo: 'Operador', roles: [] };
+  const roles: string[] = Array.isArray(user.roles) ? user.roles : [];
+  const hasAdmin = roles.some((r) => r.toLowerCase().includes('admin'));
+  const hasCounter = roles.some((r) => r.toLowerCase().includes('counter'));
 
   useEffect(() => {
     const updateClock = () => {
@@ -41,7 +44,6 @@ export default function OperatorSidebar({ children }: OperatorSidebarProps) {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#18181B]">
-      {/* Sidebar fijo 256px para Rol Operador */}
       <aside className="fixed left-0 top-0 h-full w-64 bg-[#F4F4F5] border-r border-zinc-200 z-50 flex flex-col">
         <div className="h-16 px-4 flex items-center gap-2.5 bg-white border-b border-zinc-200">
           <div className="w-8 h-8 rounded bg-[#0284C7] text-white flex items-center justify-center">
@@ -83,48 +85,40 @@ export default function OperatorSidebar({ children }: OperatorSidebarProps) {
 
         <div className="p-2.5 bg-white border-t border-zinc-200">
           <div className="flex items-center justify-between px-2.5 py-1.5 rounded bg-[#F4F4F5]">
-            <div className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[15px] text-zinc-500">sensors</span>
-              <span className="font-mono-code text-xs text-zinc-700 font-medium">
-                FIDS-OPS v2.4
-              </span>
-            </div>
+            <span className="text-[11px] font-semibold text-zinc-600">Control de Operaciones</span>
             <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
           </div>
         </div>
       </aside>
 
-      {/* Topbar + Main Content */}
       <div className="pl-64">
         <header className="fixed top-0 left-64 right-0 h-16 bg-white/95 backdrop-blur-md border-b border-zinc-200 z-40 px-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#F4F4F5] border border-zinc-200">
-              <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
-              <span className="font-mono-code text-xs text-zinc-600">Neon Cloud DB:</span>
-              <span className="font-mono-code text-xs font-bold text-emerald-700">Sincronizado</span>
-            </div>
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded bg-[#F4F4F5] border border-zinc-200 text-zinc-700 font-mono-code text-xs">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded bg-[#F4F4F5] border border-zinc-200 text-zinc-700 font-mono-code text-xs">
               <span className="material-symbols-outlined text-[15px] text-zinc-500">schedule</span>
               <span>{utcTime}</span>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => navigate('/admin/dashboard')}
-              className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 text-xs font-medium border border-zinc-200 transition-colors cursor-pointer"
-            >
-              Ir a Consola Admin
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/counter/cartelera')}
-              className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 text-xs font-medium border border-zinc-200 transition-colors cursor-pointer"
-            >
-              Ir a Mostrador Counter
-            </button>
-            <div className="h-6 w-px bg-zinc-200"></div>
+            {hasAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate('/admin/dashboard')}
+                className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 text-xs font-medium border border-zinc-200 transition-colors cursor-pointer"
+              >
+                Consola Admin
+              </button>
+            )}
+            {hasCounter && (
+              <button
+                type="button"
+                onClick={() => navigate('/counter/cartelera')}
+                className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 text-xs font-medium border border-zinc-200 transition-colors cursor-pointer"
+              >
+                Mostrador Counter
+              </button>
+            )}
             <div className="flex items-center gap-2.5">
               <div className="flex flex-col text-right">
                 <span className="text-xs font-semibold text-[#18181B] leading-tight">

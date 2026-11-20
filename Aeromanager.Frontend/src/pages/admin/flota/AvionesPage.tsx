@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { AerolineaDto, AvionDto, ModeloAvionDto } from '../../../types/models';
 
 export default function AvionesPage() {
@@ -30,7 +30,7 @@ export default function AvionesPage() {
       setAerolineas(aeRes.data);
       setModelos(moRes.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/aviones.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -89,7 +89,7 @@ export default function AvionesPage() {
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al guardar aeronave en la BD.');
+      setErrorMsg(extractApiError(err, 'Error al guardar aeronave.'));
     }
   };
 
@@ -102,7 +102,7 @@ export default function AvionesPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Flota de Aviones Físicos</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Registros en vivo desde la tabla Avion (`Matricula`, `CapacidadFisica`, `EstadoOperativo`) en Neon Cloud PostgreSQL.
+            Registros en vivo.
           </p>
         </div>
         <button
@@ -139,8 +139,8 @@ export default function AvionesPage() {
               <tr>
                 <td colSpan={7} className="py-8 text-center text-zinc-500">
                   {loading
-                    ? 'Consultando GET /api/aviones...'
-                    : 'No hay aviones registrados en la base de datos.'}
+                    ? 'Cargando información...'
+                    : 'No hay aviones registrados.'}
                 </td>
               </tr>
             ) : (

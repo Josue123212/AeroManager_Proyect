@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../../api/axiosClient';
 
 interface HistorialDescarga {
   id: string;
@@ -66,8 +66,7 @@ export default function ReportesExcelPage() {
       registrarEnHistorial(titulo, fileName, blob.size);
     } catch (err: any) {
       setErrorMsg(
-        err.response?.data?.message ||
-          `Error al descargar GET /api/reportes/${endpoint} desde Aeromanager.Api.`
+        extractApiError(err, `Error al descargar Sistema AeroManager${endpoint} desde Aeromanager.Api.`)
       );
     } finally {
       setDownloading(null);
@@ -84,8 +83,7 @@ export default function ReportesExcelPage() {
           Centro de Descarga de Reportes Excel (.xls)
         </h1>
         <p className="text-xs text-zinc-500 mt-0.5">
-          Generación directa de hojas de cálculo desde Neon Cloud PostgreSQL mediante el adaptador
-          ExcelReportService (`GET /api/reportes/*-excel`).
+          Generación directa de hojas de cálculo en formato compatible con Microsoft Excel.
         </p>
       </div>
 
@@ -101,7 +99,7 @@ export default function ReportesExcelPage() {
           <div>
             <div className="flex items-center justify-between">
               <span className="font-mono-code text-xs font-bold px-2.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700">
-                GET /api/reportes/vuelos-excel
+                Sistema AeroManager
               </span>
               <span className="material-symbols-outlined text-emerald-600">flight_takeoff</span>
             </div>
@@ -109,7 +107,7 @@ export default function ReportesExcelPage() {
               Reporte Maestro de Vuelos
             </h3>
             <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
-              Exporta el cronograma completo de la tabla Vuelo en Neon Cloud PostgreSQL (rutas,
+              Exporta el cronograma completo de la tabla Vuelo (rutas,
               aeronaves, puertas de embarque, tarifas base y estado operativo).
             </p>
           </div>
@@ -136,7 +134,7 @@ export default function ReportesExcelPage() {
           <div>
             <div className="flex items-center justify-between">
               <span className="font-mono-code text-xs font-bold px-2.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700">
-                GET /api/reportes/reservas-excel
+                Sistema AeroManager
               </span>
               <span className="material-symbols-outlined text-emerald-600">airplane_ticket</span>
             </div>
@@ -173,7 +171,7 @@ export default function ReportesExcelPage() {
           <div>
             <div className="flex items-center justify-between">
               <span className="font-mono-code text-xs font-bold px-2.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700">
-                GET /api/reportes/pasajeros-excel
+                Sistema AeroManager
               </span>
               <span className="material-symbols-outlined text-emerald-600">groups</span>
             </div>
@@ -238,7 +236,7 @@ export default function ReportesExcelPage() {
               <tr>
                 <td colSpan={5} className="py-8 text-center text-zinc-500">
                   Aún no se han realizado descargas en esta sesión. Haga clic en cualquiera de los 3
-                  botones superiores para exportar desde Neon Cloud PostgreSQL.
+                  botones superiores para exportar.
                 </td>
               </tr>
             ) : (

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axiosClient from '../../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { AiAssistantResponseDto } from '../../../types/models';
 
 interface ChatMessage {
@@ -10,7 +10,7 @@ interface ChatMessage {
 }
 
 const SUGERENCIAS_OPERATIVAS = [
-  '¿Cuál es el resumen ejecutivo actual de vuelos, aviones y reservas en Neon Cloud?',
+  '¿Cuál es el resumen ejecutivo actual de vuelos, aviones y reservas?',
   '¿Qué recomendaciones operativas sugieres para optimizar la asignación de puertas de embarque?',
   '¿Cómo previene AeroManager el solapamiento de asientos cuando dos counters venden al mismo tiempo?',
   '¿Qué vuelos prioritarios deberían abrir embarque en los próximos 45 minutos?'
@@ -23,7 +23,7 @@ export default function AsistenteIaPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: 'assistant',
-      text: 'Bienvenido al Copilot Operativo AeroManager. Todas las consultas se envían directamente a POST /api/ai/consultar (`AskAiAssistantCommandHandler` + `GeminiAiService`), inyectando la telemetría real en vivo de las tablas Vuelo, Avion y Reserva de Neon Cloud PostgreSQL.',
+      text: 'Bienvenido al Copilot Operativo AeroManager. Todas las consultas se envían directamente a Sistema AeroManager , inyectando la telemetría real en vivo de las tablas Vuelo, Avion y Reserva.',
       timestamp: new Date().toLocaleTimeString('es-PE')
     }
   ]);
@@ -57,8 +57,7 @@ export default function AsistenteIaPage() {
       ]);
     } catch (err: any) {
       setErrorMsg(
-        err.response?.data?.message ||
-          'No se pudo contactar POST /api/ai/consultar en Aeromanager.Api.'
+        extractApiError(err, 'No se pudo contactar Sistema AeroManager en Aeromanager.Api.')
       );
     } finally {
       setLoading(false);
@@ -82,11 +81,11 @@ export default function AsistenteIaPage() {
           </h1>
           <p className="text-xs text-zinc-500 mt-0.5">
             Asistente inteligente conectado en tiempo real a los repositorios de vuelos, aviones y
-            reservas mediante POST /api/ai/consultar.
+            reservas mediante Sistema AeroManager.
           </p>
         </div>
         <span className="font-mono-code text-xs px-3 py-1.5 rounded bg-sky-50 border border-sky-200 text-[#0284C7] font-semibold">
-          Endpoint: POST /api/ai/consultar
+          Asistente Operativo en Línea
         </span>
       </div>
 
@@ -125,7 +124,7 @@ export default function AsistenteIaPage() {
             </span>
           </div>
           <span className="font-mono-code text-[11px] text-emerald-700">
-            Contexto BD Inyectado Automáticamente por AskAiAssistantCommandHandler
+            Análisis operativo en tiempo real
           </span>
         </div>
 
@@ -147,7 +146,7 @@ export default function AsistenteIaPage() {
                 <div>{m.text}</div>
                 {m.contexto && (
                   <div className="mt-2.5 pt-2 border-t border-zinc-300/80 font-mono-code text-[11px] text-zinc-600">
-                    <strong>Telemetría Real de Neon DB:</strong> {m.contexto}
+                    <strong>Telemetría Real de el sistema:</strong> {m.contexto}
                   </div>
                 )}
               </div>
@@ -158,7 +157,7 @@ export default function AsistenteIaPage() {
           ))}
           {loading && (
             <div className="text-xs font-mono-code text-[#0284C7] animate-pulse">
-              Consultando POST /api/ai/consultar en Aeromanager.Api...
+              Consultando Sistema AeroManager en Aeromanager.Api...
             </div>
           )}
         </div>

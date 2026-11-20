@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { UsuarioDto } from '../../../types/models';
 
 export default function UsuariosPage() {
@@ -21,7 +21,7 @@ export default function UsuariosPage() {
       const res = await axiosClient.get<UsuarioDto[]>('/usuarios');
       setUsuarios(res.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/usuarios.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -74,7 +74,7 @@ export default function UsuariosPage() {
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al guardar usuario en la BD.');
+      setErrorMsg(extractApiError(err, 'Error al guardar usuario.'));
     }
   };
 
@@ -87,7 +87,7 @@ export default function UsuariosPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Gestión de Usuarios</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Registros en vivo desde la tabla Usuario (`NombreCompleto`, `Email`, `EstadoAcceso`) en Neon Cloud PostgreSQL.
+            Registros en vivo.
           </p>
         </div>
         <button
@@ -123,8 +123,8 @@ export default function UsuariosPage() {
               <tr>
                 <td colSpan={6} className="py-8 text-center text-zinc-500">
                   {loading
-                    ? 'Consultando GET /api/usuarios...'
-                    : 'No hay usuarios registrados en la base de datos.'}
+                    ? 'Cargando información...'
+                    : 'No hay usuarios registrados.'}
                 </td>
               </tr>
             ) : (

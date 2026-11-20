@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axiosClient from '../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../api/axiosClient';
 import {
   AeropuertoDto,
   AsientoDto,
@@ -91,7 +91,7 @@ export default function MapaCabinaReservaPage() {
       }
     } catch (err: any) {
       setErrorMsg(
-        err.response?.data?.message || 'Error al cargar el Mapa Visual de Cabina desde la API.'
+        extractApiError(err, 'Error al cargar el Mapa Visual de Cabina desde la API.')
       );
     } finally {
       setLoading(false);
@@ -201,7 +201,7 @@ export default function MapaCabinaReservaPage() {
     setErrorMsg(null);
 
     try {
-      // 1. Verificar en fresco en BD si otro Counter ocupó el asiento hace milisegundos
+      // 1. Verificar en fresco si otro Counter ocupó el asiento hace milisegundos
       const freshSeatRes = await axiosClient.get<AsientoVueloDto>(
         `/asientosvuelo/${selectedItem.asientoVuelo.id}`
       );
@@ -211,7 +211,7 @@ export default function MapaCabinaReservaPage() {
         return;
       }
 
-      // 2. Obtener un UsuarioRegistroId válido existente en la tabla Usuario de Neon DB
+      // 2. Obtener un UsuarioRegistroId válido existente en la tabla Usuario de el sistema
       const storedUser = localStorage.getItem('aeromanager_user');
       const parsedUser = storedUser ? JSON.parse(storedUser) : null;
       const validUsuarioId =
@@ -219,7 +219,7 @@ export default function MapaCabinaReservaPage() {
         usuarios[0]?.id ||
         1;
 
-      // 3. Crear cabecera Reserva (POST /api/reservas)
+      // 3. Crear cabecera Reserva
       const reservaRes = await axiosClient.post<ReservaDto>('/reservas', {
         codigoTicket,
         vueloId: currentVuelo.id,
@@ -242,7 +242,7 @@ export default function MapaCabinaReservaPage() {
       navigate('/counter/tickets');
     } catch (err: any) {
       const status = err.response?.status;
-      const backendMsg: string = err.response?.data?.message || '';
+      const backendMsg: string = extractApiError(err, '');
       if (
         status === 409 ||
         status === 400 ||
@@ -254,7 +254,7 @@ export default function MapaCabinaReservaPage() {
       } else {
         setErrorMsg(
           backendMsg ||
-            'Error al procesar la reserva transaccional. Verifique que exista al menos un Usuario y un Pasajero en la base de datos.'
+            'Error al procesar la reserva transaccional. Verifique que exista al menos un Usuario y un Pasajero.'
         );
       }
     } finally {
@@ -290,7 +290,7 @@ export default function MapaCabinaReservaPage() {
             }}
             className="h-9 px-3 rounded border border-zinc-300 bg-white font-mono-code text-xs font-bold text-[#0284C7] outline-none focus:border-[#0284C7]"
           >
-            {vuelos.length === 0 && <option value={0}>Sin vuelos en BD</option>}
+            {vuelos.length === 0 && <option value={0}>Sin vuelos</option>}
             {vuelos.map((v) => (
               <option key={v.id} value={v.id}>
                 Vuelo Activo: {v.numeroVuelo} (${v.precioBase.toFixed(2)} USD)
@@ -361,8 +361,8 @@ export default function MapaCabinaReservaPage() {
               <div className="py-12 text-center space-y-3">
                 <p className="text-xs text-zinc-500">
                   {loading
-                    ? 'Cargando mapa de asientos desde Neon Cloud PostgreSQL...'
-                    : 'Este vuelo aún no tiene asientos habilitados en la tabla AsientoVuelo.'}
+                    ? 'Cargando mapa de asientos...'
+                    : 'Este vuelo aún no tiene asientos habilitados .'}
                 </p>
                 {!loading && (
                   <button
@@ -565,7 +565,7 @@ export default function MapaCabinaReservaPage() {
           <div className="w-full max-w-lg bg-white border border-zinc-200 rounded-xl shadow-xl overflow-hidden">
             <div className="px-5 py-4 bg-[#F4F4F5] border-b border-zinc-200 flex items-center justify-between">
               <h3 className="text-sm font-bold text-[#18181B]">
-                Confirmación Transaccional de Reserva (UnitOfWork)
+                Confirmación Transaccional de Reserva
               </h3>
               <button
                 type="button"
@@ -641,7 +641,7 @@ export default function MapaCabinaReservaPage() {
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                 >
                   {pasajeros.length === 0 && (
-                    <option value={0}>No hay pasajeros en BD — Registre uno primero</option>
+                    <option value={0}>No hay pasajeros — Registre uno primero</option>
                   )}
                   {pasajeros.map((p) => (
                     <option key={p.id} value={p.id}>
@@ -668,7 +668,7 @@ export default function MapaCabinaReservaPage() {
               <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs leading-relaxed">
                 <strong>GARANTÍA DE ATOMICIDAD ACID:</strong> Al confirmar, el asiento{' '}
                 <strong className="font-mono-code">{selectedItem.designador}</strong> pasará
-                inmediatamente a estado <strong>OCUPADO (`EstaOcupado = True`)</strong> mediante
+                inmediatamente a estado <strong>OCUPADO (Ocupado)</strong> mediante
                 transacción atómica <code className="font-mono-code">UnitOfWork</code> (
                 <code className="font-mono-code">BeginTransactionAsync</code> /{' '}
                 <code className="font-mono-code">CommitTransactionAsync</code>).
@@ -690,7 +690,7 @@ export default function MapaCabinaReservaPage() {
                   <span className="material-symbols-outlined text-[17px]">verified</span>
                   <span>
                     {submitting
-                      ? 'Ejecutando UnitOfWork...'
+                      ? 'Procesando reserva...'
                       : 'Confirmar Reserva y Emitir Ticket'}
                   </span>
                 </button>
@@ -722,7 +722,7 @@ export default function MapaCabinaReservaPage() {
 
             <div className="p-5 space-y-4 text-xs">
               <p className="text-zinc-700 leading-relaxed">
-                <strong>ReservaDomainService / Control Anti-Solapamiento:</strong> La butaca
+                <strong>Control de Disponibilidad:</strong> La butaca
                 solicitada ya fue bloqueada o emitida por otro terminal de Counter.
               </p>
 
@@ -740,7 +740,7 @@ export default function MapaCabinaReservaPage() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-zinc-500">Estado en Neon DB:</span>
+                  <span className="text-zinc-500">Estado:</span>
                   <span className="px-2 py-0.5 rounded bg-red-100 border border-red-300 font-mono-code text-[11px] font-bold text-red-700">
                     OCUPADO (EstaOcupado = True)
                   </span>

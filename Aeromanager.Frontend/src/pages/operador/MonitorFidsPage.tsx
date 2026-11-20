@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../api/axiosClient';
 import {
   AeropuertoDto,
   AvionDto,
@@ -47,7 +47,7 @@ export default function MonitorFidsPage() {
       setTerminales(tRes.data);
     } catch (err: any) {
       setErrorMsg(
-        err.response?.data?.message || 'Error al sincronizar el Monitor FIDS desde Aeromanager.Api.'
+        extractApiError(err, 'Error al sincronizar el Monitor FIDS desde Aeromanager.Api.')
       );
     } finally {
       setLoading(false);
@@ -263,7 +263,7 @@ export default function MonitorFidsPage() {
                 <td colSpan={6} className="py-8 text-center text-zinc-500">
                   {loading
                     ? 'Consultando vuelos en vivo...'
-                    : 'No hay vuelos registrados en la base de datos que coincidan con el filtro.'}
+                    : 'No hay vuelos registrados que coincidan con el filtro.'}
                 </td>
               </tr>
             ) : (

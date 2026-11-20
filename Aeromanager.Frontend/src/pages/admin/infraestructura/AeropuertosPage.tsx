@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { AeropuertoDto, CiudadDto } from '../../../types/models';
 
 export default function AeropuertosPage() {
@@ -27,7 +27,7 @@ export default function AeropuertosPage() {
       setAeropuertos(aRes.data);
       setCiudades(cRes.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/aeropuertos.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -82,7 +82,7 @@ export default function AeropuertosPage() {
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al guardar aeropuerto en la BD.');
+      setErrorMsg(extractApiError(err, 'Error al guardar aeropuerto.'));
     }
   };
 
@@ -104,7 +104,7 @@ export default function AeropuertosPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Sedes Aeroportuarias IATA</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Registros en vivo desde la tabla Aeropuerto en Neon Cloud PostgreSQL (`GET /api/aeropuertos`).
+            Registros en vivo.
           </p>
         </div>
         <button
@@ -133,7 +133,7 @@ export default function AeropuertosPage() {
             className="w-full sm:w-80 h-9 px-3 rounded border border-zinc-300 bg-white text-xs outline-none focus:border-[#0284C7]"
           />
           <span className="font-mono-code text-xs text-zinc-600">
-            Sedes en BD: <strong>{filtered.length}</strong>
+            Sedes: <strong>{filtered.length}</strong>
           </span>
         </div>
 
@@ -154,8 +154,8 @@ export default function AeropuertosPage() {
               <tr>
                 <td colSpan={7} className="py-8 text-center text-zinc-500">
                   {loading
-                    ? 'Consultando GET /api/aeropuertos...'
-                    : 'No hay aeropuertos registrados en la base de datos.'}
+                    ? 'Cargando información...'
+                    : 'No hay aeropuertos registrados.'}
                 </td>
               </tr>
             ) : (

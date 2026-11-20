@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import axiosClient from '../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../api/axiosClient';
 import { AeropuertoDto, AvionDto, ReservaDto, RutaDto, VueloDto } from '../../types/models';
 
 export default function DashboardEjecutivoPage() {
@@ -30,8 +30,7 @@ export default function DashboardEjecutivoPage() {
       setReservas(resRes.data);
     } catch (err: any) {
       setErrorMsg(
-        err.response?.data?.message ||
-          'No se pudo conectar con Aeromanager.Api. Asegúrese de que el backend esté corriendo.'
+        extractApiError(err, 'No se pudo conectar con Aeromanager.Api. Asegúrese de que el backend esté corriendo.')
       );
     } finally {
       setLoading(false);
@@ -92,7 +91,7 @@ export default function DashboardEjecutivoPage() {
           <h1 className="text-2xl font-bold text-[#18181B] tracking-tight">Dashboard Ejecutivo</h1>
           <p className="text-xs text-zinc-500 mt-1">
             Monitoreo centralizado de infraestructura IATA, flota aérea, vuelos y facturación en
-            tiempo real desde Neon Cloud PostgreSQL.
+            tiempo real.
           </p>
         </div>
 
@@ -102,7 +101,7 @@ export default function DashboardEjecutivoPage() {
             onClick={fetchMetrics}
             className="font-mono-code text-xs px-3 py-1.5 rounded bg-[#F4F4F5] hover:bg-zinc-200 border border-zinc-200 text-zinc-700 cursor-pointer"
           >
-            {loading ? 'Consultando Neon DB...' : '↻ Actualizar Telemetría'}
+            {loading ? 'Consultando el sistema...' : '↻ Actualizar Telemetría'}
           </button>
         </div>
       </section>
@@ -135,7 +134,7 @@ export default function DashboardEjecutivoPage() {
             </div>
           </div>
           <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-100">
-            <span className="font-mono-code text-zinc-500">GET /api/aeropuertos</span>
+            <span className="font-mono-code text-zinc-500">Sistema AeroManager</span>
             <Link
               to="/admin/aeropuertos"
               className="text-emerald-700 font-semibold font-mono-code text-[11px] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded hover:bg-emerald-100"
@@ -190,9 +189,9 @@ export default function DashboardEjecutivoPage() {
             </div>
           </div>
           <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-100">
-            <span className="text-zinc-500 font-mono-code">Rutas en BD: {rutas.length}</span>
+            <span className="text-zinc-500 font-mono-code">Rutas: {rutas.length}</span>
             <span className="inline-flex items-center gap-0.5 text-emerald-700 font-semibold font-mono-code text-[11px] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
-              GET /api/vuelos
+              Sistema AeroManager
             </span>
           </div>
         </div>
@@ -219,7 +218,7 @@ export default function DashboardEjecutivoPage() {
           <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-200/70">
             <span className="text-zinc-600 font-mono-code">Divisa: USD</span>
             <span className="text-emerald-700 font-semibold font-mono-code text-[11px] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
-              {reservasConfirmadas.length} Tickets en BD
+              {reservasConfirmadas.length} Tickets
             </span>
           </div>
         </div>
@@ -235,7 +234,7 @@ export default function DashboardEjecutivoPage() {
             <div>
               <h2 className="text-sm font-bold text-[#18181B]">Actividad Reciente de Vuelos</h2>
               <span className="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
-                Registros Reales de la Tabla Vuelo en Neon Cloud PostgreSQL
+                Últimos vuelos programados
               </span>
             </div>
           </div>
@@ -275,8 +274,8 @@ export default function DashboardEjecutivoPage() {
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-zinc-500">
                     {loading
-                      ? 'Cargando vuelos desde Neon Cloud PostgreSQL...'
-                      : 'No hay vuelos registrados aún en la tabla Vuelo.'}
+                      ? 'Cargando vuelos...'
+                      : 'No hay vuelos registrados aún todavía.'}
                   </td>
                 </tr>
               ) : (

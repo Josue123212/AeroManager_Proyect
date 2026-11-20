@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { AerolineaDto, PaisDto } from '../../../types/models';
 
 export default function AerolineasPage() {
@@ -25,7 +25,7 @@ export default function AerolineasPage() {
       setAerolineas(aRes.data);
       setPaises(pRes.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/aerolineas.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -76,7 +76,7 @@ export default function AerolineasPage() {
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al guardar aerolínea en la BD.');
+      setErrorMsg(extractApiError(err, 'Error al guardar aerolínea.'));
     }
   };
 
@@ -94,7 +94,7 @@ export default function AerolineasPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Catálogo de Aerolíneas</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Registros en vivo desde la tabla Aerolinea en Neon Cloud PostgreSQL (`GET /api/aerolineas`).
+            Registros en vivo.
           </p>
         </div>
         <button
@@ -130,8 +130,8 @@ export default function AerolineasPage() {
               <tr>
                 <td colSpan={6} className="py-8 text-center text-zinc-500">
                   {loading
-                    ? 'Consultando GET /api/aerolineas...'
-                    : 'No hay aerolíneas registradas en la base de datos.'}
+                    ? 'Cargando información...'
+                    : 'No hay aerolíneas registradas.'}
                 </td>
               </tr>
             ) : (

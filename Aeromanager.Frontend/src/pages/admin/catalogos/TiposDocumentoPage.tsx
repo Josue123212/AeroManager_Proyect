@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { TipoDocumentoDto } from '../../../types/models';
 
 export default function TiposDocumentoPage() {
@@ -20,7 +20,7 @@ export default function TiposDocumentoPage() {
       const res = await axiosClient.get<TipoDocumentoDto[]>('/tiposdocumento');
       setTipos(res.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/tiposdocumento.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -66,7 +66,7 @@ export default function TiposDocumentoPage() {
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al guardar tipo de documento en la BD.');
+      setErrorMsg(extractApiError(err, 'Error al guardar tipo de documento.'));
     }
   };
 
@@ -79,7 +79,7 @@ export default function TiposDocumentoPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Tipos de Documento</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Registros en vivo desde la tabla TipoDocumento en Neon Cloud PostgreSQL (`GET /api/tiposdocumento`).
+            Registros en vivo.
           </p>
         </div>
         <button
@@ -115,8 +115,8 @@ export default function TiposDocumentoPage() {
               <tr>
                 <td colSpan={6} className="py-8 text-center text-zinc-500">
                   {loading
-                    ? 'Consultando GET /api/tiposdocumento...'
-                    : 'No hay tipos de documento registrados en la base de datos.'}
+                    ? 'Cargando información...'
+                    : 'No hay tipos de documento registrados.'}
                 </td>
               </tr>
             ) : (

@@ -19,7 +19,10 @@ export default function CounterNavbar({ children }: CounterNavbarProps) {
   const storedUser = localStorage.getItem('aeromanager_user');
   const user = storedUser
     ? JSON.parse(storedUser)
-    : { nombreCompleto: 'Agente de Counter', rolActivo: 'Counter' };
+    : { nombreCompleto: 'Agente de Counter', rolActivo: 'Counter', roles: [] };
+  const roles: string[] = Array.isArray(user.roles) ? user.roles : [];
+  const hasAdmin = roles.some((r) => r.toLowerCase().includes('admin'));
+  const hasOperador = roles.some((r) => r.toLowerCase().includes('operador'));
 
   useEffect(() => {
     const updateClock = () => {
@@ -39,7 +42,6 @@ export default function CounterNavbar({ children }: CounterNavbarProps) {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-[#18181B]">
-      {/* Barra Superior Fija del Mostrador Counter con 4 Pestañas alineadas a 36px */}
       <header className="fixed top-0 left-0 right-0 bg-white border-b border-zinc-200 z-50 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -58,7 +60,6 @@ export default function CounterNavbar({ children }: CounterNavbarProps) {
             </div>
           </div>
 
-          {/* 4 Pestañas de Navegación del Mostrador (h-9 = 36px) */}
           <nav className="hidden lg:flex items-center gap-1.5 bg-[#F4F4F5] p-1 rounded-lg border border-zinc-200">
             {COUNTER_TABS.map((tab) => (
               <NavLink
@@ -78,29 +79,30 @@ export default function CounterNavbar({ children }: CounterNavbarProps) {
             ))}
           </nav>
 
-          {/* Reloj UTC + Cambio de Consola + Perfil */}
           <div className="flex items-center gap-2.5">
             <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#F4F4F5] border border-zinc-200 font-mono-code text-xs text-zinc-700">
               <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
               <span>{utcTime}</span>
             </div>
 
-            <button
-              type="button"
-              onClick={() => navigate('/admin/dashboard')}
-              className="px-2 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 text-[11px] font-medium border border-zinc-200 cursor-pointer"
-            >
-              Admin
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/operador/fids')}
-              className="px-2 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 text-[11px] font-medium border border-zinc-200 cursor-pointer"
-            >
-              Operador
-            </button>
-
-            <div className="h-6 w-px bg-zinc-200"></div>
+            {hasAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate('/admin/dashboard')}
+                className="px-2 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 text-[11px] font-medium border border-zinc-200 cursor-pointer"
+              >
+                Admin
+              </button>
+            )}
+            {hasOperador && (
+              <button
+                type="button"
+                onClick={() => navigate('/operador/fids')}
+                className="px-2 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 text-[11px] font-medium border border-zinc-200 cursor-pointer"
+              >
+                Operador
+              </button>
+            )}
 
             <div className="flex items-center gap-2">
               <div className="hidden sm:flex flex-col text-right">
@@ -123,7 +125,6 @@ export default function CounterNavbar({ children }: CounterNavbarProps) {
           </div>
         </div>
 
-        {/* Barra de pestañas móvil/tablet */}
         <div className="flex lg:hidden overflow-x-auto px-4 py-2 bg-[#F4F4F5] border-t border-zinc-200 gap-1.5">
           {COUNTER_TABS.map((tab) => (
             <NavLink

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../api/axiosClient';
 import {
   AerolineaDto,
   AvionDto,
@@ -34,7 +34,7 @@ export default function FlotaOperativaPage() {
       setModelos(moRes.data);
       setVuelos(vuRes.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/aviones.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -86,7 +86,7 @@ export default function FlotaOperativaPage() {
           onClick={loadData}
           className="h-9 px-4 rounded bg-[#F4F4F5] hover:bg-zinc-200 border border-zinc-200 text-zinc-700 font-mono-code text-xs font-semibold cursor-pointer"
         >
-          {loading ? 'Consultando...' : '↻ Refrescar Flota'}
+          {loading ? 'Cargando...' : '↻ Refrescar Flota'}
         </button>
       </div>
 
@@ -96,7 +96,7 @@ export default function FlotaOperativaPage() {
         </div>
       )}
 
-      {/* 3 KPIs Reales calculados desde GET /api/aviones y GET /api/vuelos */}
+      {/* 3 KPIs Reales calculados desde Sistema AeroManager y Sistema AeroManager */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="p-4 bg-white border border-zinc-200 rounded-xl shadow-2xs">
           <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">
@@ -171,7 +171,7 @@ export default function FlotaOperativaPage() {
             </select>
           </div>
           <span className="font-mono-code text-xs text-zinc-600">
-            Total en BD: <strong>{filtered.length}</strong>
+            Total: <strong>{filtered.length}</strong>
           </span>
         </div>
 
@@ -192,8 +192,8 @@ export default function FlotaOperativaPage() {
               <tr>
                 <td colSpan={7} className="py-8 text-center text-zinc-500">
                   {loading
-                    ? 'Consultando GET /api/aviones...'
-                    : 'No hay aeronaves registradas en la base de datos.'}
+                    ? 'Cargando información...'
+                    : 'No hay aeronaves registradas.'}
                 </td>
               </tr>
             ) : (

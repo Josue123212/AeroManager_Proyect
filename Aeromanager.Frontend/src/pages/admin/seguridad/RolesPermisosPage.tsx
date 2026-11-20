@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { RolDto, UsuarioDto, UsuarioRolDto } from '../../../types/models';
 
 export default function RolesPermisosPage() {
@@ -25,7 +25,7 @@ export default function RolesPermisosPage() {
       setUsuarios(uRes.data);
       setAsignaciones(urRes.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/usuarioroles.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -49,7 +49,7 @@ export default function RolesPermisosPage() {
       setShowAssignModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al asignar rol a usuario en la BD.');
+      setErrorMsg(extractApiError(err, 'Error al asignar rol a usuario.'));
     }
   };
 
@@ -62,7 +62,7 @@ export default function RolesPermisosPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Roles y Permisos (UsuarioRol)</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Registros en vivo desde las tablas Rol y UsuarioRol en Neon Cloud PostgreSQL (`GET /api/roles`, `GET /api/usuarioroles`).
+            Registros en vivo desde las tablas Rol y UsuarioRol (Sistema AeroManager, Sistema AeroManager).
           </p>
         </div>
         <button
@@ -108,7 +108,7 @@ export default function RolesPermisosPage() {
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <div className="p-4 bg-[#F4F4F5] border-b border-zinc-200">
           <h2 className="text-sm font-bold text-[#18181B]">
-            Asignaciones Activas de Roles (Tabla UsuarioRol)
+            Asignaciones Activas de Roles 
           </h2>
         </div>
         <table className="w-full text-left border-collapse">
@@ -126,8 +126,8 @@ export default function RolesPermisosPage() {
               <tr>
                 <td colSpan={5} className="py-8 text-center text-zinc-500">
                   {loading
-                    ? 'Consultando GET /api/usuarioroles...'
-                    : 'No hay asignaciones UsuarioRol registradas en la base de datos.'}
+                    ? 'Cargando información...'
+                    : 'No hay asignaciones de roles registradas.'}
                 </td>
               </tr>
             ) : (

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../api/axiosClient';
 import {
   AsientoDto,
   AsientoVueloDto,
@@ -47,7 +47,7 @@ export default function DisponibilidadCabinaPage() {
       }
     } catch (err: any) {
       setErrorMsg(
-        err.response?.data?.message || 'Error al consultar GET /api/asientosvuelo.'
+        extractApiError(err, 'No se pudo cargar la información del servidor.')
       );
     } finally {
       setLoading(false);
@@ -108,7 +108,7 @@ export default function DisponibilidadCabinaPage() {
       await loadData();
     } catch (err: any) {
       setErrorMsg(
-        err.response?.data?.message || 'Error al habilitar el asiento en el vuelo.'
+        extractApiError(err, 'Error al habilitar el asiento en el vuelo.')
       );
     }
   };
@@ -132,8 +132,7 @@ export default function DisponibilidadCabinaPage() {
       await loadData();
     } catch (err: any) {
       setErrorMsg(
-        err.response?.data?.message ||
-          'Error al habilitar masivamente los asientos de la aeronave.'
+        extractApiError(err, 'Error al habilitar masivamente los asientos de la aeronave.')
       );
     } finally {
       setProcessingBatch(false);
@@ -157,7 +156,7 @@ export default function DisponibilidadCabinaPage() {
       });
       await loadData();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al actualizar estado del AsientoVuelo.');
+      setErrorMsg(extractApiError(err, 'Error al actualizar el estado del asiento.'));
     }
   };
 
@@ -182,7 +181,7 @@ export default function DisponibilidadCabinaPage() {
             Disponibilidad de Cabina por Vuelo
           </h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Control de concurrencia y bloqueo transaccional de butacas por vuelo en Neon Cloud
+            Control de concurrencia y bloqueo transaccional de butacas por vuelo
             PostgreSQL.
           </p>
         </div>
@@ -193,7 +192,7 @@ export default function DisponibilidadCabinaPage() {
             onChange={(e) => setSelectedVueloId(Number(e.target.value))}
             className="h-9 px-3 rounded border border-zinc-300 bg-white font-mono-code text-xs font-semibold text-[#0284C7] outline-none focus:border-[#0284C7]"
           >
-            {vuelos.length === 0 && <option value={0}>Sin vuelos en BD</option>}
+            {vuelos.length === 0 && <option value={0}>Sin vuelos</option>}
             {vuelos.map((v) => {
               const r = rutas.find((x) => x.id === v.rutaId);
               return (
@@ -284,7 +283,7 @@ export default function DisponibilidadCabinaPage() {
             </select>
           </div>
           <span className="font-mono-code text-xs text-zinc-600">
-            Registros AsientoVuelo: <strong>{filteredCabina.length}</strong>
+            Asientos configurados: <strong>{filteredCabina.length}</strong>
           </span>
         </div>
 
@@ -305,7 +304,7 @@ export default function DisponibilidadCabinaPage() {
               <tr>
                 <td colSpan={7} className="py-8 text-center text-zinc-500">
                   {loading
-                    ? 'Consultando GET /api/asientosvuelo...'
+                    ? 'Cargando información...'
                     : 'No hay asientos habilitados para este vuelo. Use "+ Habilitar Asiento en Vuelo".'}
                 </td>
               </tr>
@@ -437,7 +436,7 @@ export default function DisponibilidadCabinaPage() {
                   <span className="material-symbols-outlined text-[17px]">bolt</span>
                   <span>
                     {processingBatch
-                      ? 'Habilitando cabina en Neon DB...'
+                      ? 'Habilitando cabina...'
                       : `Habilitar toda la cabina automáticamente (${asientosDelAvion.length} asientos)`}
                   </span>
                 </button>

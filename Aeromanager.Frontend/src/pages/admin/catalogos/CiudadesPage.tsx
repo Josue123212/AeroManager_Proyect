@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { CiudadDto, PaisDto } from '../../../types/models';
 
 export default function CiudadesPage() {
@@ -25,7 +25,7 @@ export default function CiudadesPage() {
       setCiudades(cRes.data);
       setPaises(pRes.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/ciudades.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -68,7 +68,7 @@ export default function CiudadesPage() {
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al guardar ciudad en la base de datos.');
+      setErrorMsg(extractApiError(err, 'Error al guardar ciudad.'));
     }
   };
 
@@ -88,7 +88,7 @@ export default function CiudadesPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Catálogo de Ciudades</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Localidades geográficas vinculadas a la tabla Pais en Neon Cloud PostgreSQL (`GET /api/ciudades`).
+            Localidades geográficas vinculadas.
           </p>
         </div>
         <button
@@ -117,7 +117,7 @@ export default function CiudadesPage() {
             className="w-full sm:w-80 h-9 px-3 rounded border border-zinc-300 bg-white text-xs outline-none focus:border-[#0284C7]"
           />
           <span className="font-mono-code text-xs text-zinc-600">
-            Total en BD: <strong>{filtered.length}</strong>
+            Total: <strong>{filtered.length}</strong>
           </span>
         </div>
 
@@ -135,7 +135,7 @@ export default function CiudadesPage() {
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={5} className="py-8 text-center text-zinc-500">
-                  {loading ? 'Consultando GET /api/ciudades...' : 'No hay ciudades registradas en la base de datos.'}
+                  {loading ? 'Cargando información...' : 'No hay ciudades registradas.'}
                 </td>
               </tr>
             ) : (

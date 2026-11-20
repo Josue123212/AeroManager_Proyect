@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axiosClient from '../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../api/axiosClient';
 import { AeropuertoDto, RutaDto } from '../../types/models';
 
 export default function RutasOperadorPage() {
@@ -30,7 +30,7 @@ export default function RutasOperadorPage() {
       setRutas(rRes.data);
       setAeropuertos(aRes.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/rutas.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -72,7 +72,7 @@ export default function RutasOperadorPage() {
 
     if (aeropuertoOrigenId === aeropuertoDestinoId) {
       setErrorMsg(
-        'Regla de Dominio (RutaDomainService): El aeropuerto de origen y el aeropuerto de destino no pueden ser el mismo.'
+        'Regla de Dominio: El aeropuerto de origen y el aeropuerto de destino no pueden ser el mismo.'
       );
       return;
     }
@@ -101,8 +101,7 @@ export default function RutasOperadorPage() {
       await loadData();
     } catch (err: any) {
       setErrorMsg(
-        err.response?.data?.message ||
-          'Error al guardar la ruta aérea en la base de datos.'
+        extractApiError(err, 'Error al guardar la ruta aérea.')
       );
     }
   };
@@ -121,7 +120,7 @@ export default function RutasOperadorPage() {
       });
       await loadData();
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al cambiar estado de la ruta.');
+      setErrorMsg(extractApiError(err, 'Error al cambiar estado de la ruta.'));
     }
   };
 
@@ -171,7 +170,7 @@ export default function RutasOperadorPage() {
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Gestión de Rutas Aéreas</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Corredores comerciales origen-destino validados por RutaDomainService en Neon Cloud
+            Corredores comerciales origen-destino
             PostgreSQL.
           </p>
         </div>
@@ -191,7 +190,7 @@ export default function RutasOperadorPage() {
         </div>
       )}
 
-      {/* 3 Tarjetas KPI calculadas de GET /api/rutas */}
+      {/* 3 Tarjetas KPI calculadas de Sistema AeroManager */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="p-4 bg-white border border-zinc-200 rounded-xl shadow-2xs">
           <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
@@ -255,7 +254,7 @@ export default function RutasOperadorPage() {
             </select>
           </div>
           <span className="font-mono-code text-xs text-zinc-600">
-            Total en BD: <strong>{filtered.length}</strong>
+            Total: <strong>{filtered.length}</strong>
           </span>
         </div>
 
@@ -277,8 +276,8 @@ export default function RutasOperadorPage() {
               <tr>
                 <td colSpan={8} className="py-8 text-center text-zinc-500">
                   {loading
-                    ? 'Consultando GET /api/rutas...'
-                    : 'No hay rutas aéreas registradas en la base de datos.'}
+                    ? 'Cargando información...'
+                    : 'No hay rutas aéreas registradas.'}
                 </td>
               </tr>
             ) : (
@@ -356,7 +355,7 @@ export default function RutasOperadorPage() {
             <form onSubmit={handleSave} className="p-5 space-y-4">
               {/* Regla de Integridad de Dominio */}
               <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs">
-                <strong>REGLA DE INTEGRIDAD DE VUELO (RutaDomainService):</strong> El aeropuerto de
+                <strong>REGLA DE INTEGRIDAD DE VUELO:</strong> El aeropuerto de
                 origen y el aeropuerto de destino deben ser estrictamente distintos (`Origen ≠ Destino`).
               </div>
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axiosClient from '../../api/axiosClient';
+import axiosClient, { extractApiError } from '../../api/axiosClient';
 import {
   AeropuertoDto,
   AsientoVueloDto,
@@ -48,7 +48,7 @@ export default function CarteleraVuelosCounterPage() {
       setPuertas(pRes.data);
       setAsientosVuelo(avuRes.data);
     } catch (err: any) {
-      setErrorMsg(err.response?.data?.message || 'Error al consultar GET /api/vuelos.');
+      setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
       setLoading(false);
     }
@@ -189,11 +189,11 @@ export default function CarteleraVuelosCounterPage() {
           </div>
         </div>
 
-        {/* Chips de Rutas Registradas en BD */}
+        {/* Chips de Rutas Registradas */}
         {rutas.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5 pt-1">
             <span className="text-[11px] font-semibold text-zinc-500 mr-1">
-              Rutas Activas en BD:
+              Rutas Activas:
             </span>
             <button
               type="button"
@@ -224,8 +224,8 @@ export default function CarteleraVuelosCounterPage() {
       {filtered.length === 0 ? (
         <div className="p-10 bg-white border border-zinc-200 rounded-xl text-center text-xs text-zinc-500">
           {loading
-            ? 'Consultando cartelera de vuelos en Neon Cloud PostgreSQL...'
-            : 'No hay vuelos disponibles en la base de datos. Programe un vuelo en la Consola Operador.'}
+            ? 'Consultando cartelera de vuelos...'
+            : 'No hay vuelos disponibles. Programe un vuelo en la Consola Operador.'}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">

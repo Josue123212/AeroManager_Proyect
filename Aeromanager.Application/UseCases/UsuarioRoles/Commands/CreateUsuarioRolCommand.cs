@@ -54,6 +54,23 @@ public class CreateUsuarioRolCommandHandler
             });
         }
 
+        var allRoles = await _rolRepository.GetAllAsync(cancellationToken);
+        var superAdminRole = allRoles.FirstOrDefault(r =>
+            r.Nombre.Trim().Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase));
+        if (superAdminRole is not null)
+        {
+            var existingSuperAdmin = await _repository.FindAsync(
+                ur => ur.UsuarioId == command.UsuarioId && ur.RolId == superAdminRole.Id && ur.Activo,
+                cancellationToken);
+            if (existingSuperAdmin.Any())
+            {
+                throw new ValidationException(new[]
+                {
+                    new ValidationFailure(nameof(command.UsuarioId), "No se pueden asignar roles adicionales a una cuenta SuperAdmin.")
+                });
+            }
+        }
+
         var entity = new UsuarioRol
         {
             UsuarioId = command.UsuarioId,

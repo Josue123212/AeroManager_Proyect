@@ -38,9 +38,16 @@ export default function RolesPermisosPage() {
   const assignableRoles = roles.filter(
     (r) => !r.nombre.toLowerCase().includes('admin')
   );
+  const superAdminRoleId = roles.find((r) => r.nombre.trim().toLowerCase() === 'superadmin')?.id;
+  const superAdminUserIds = new Set(
+    asignaciones
+      .filter((a) => a.activo && a.rolId === superAdminRoleId)
+      .map((a) => a.usuarioId)
+  );
+  const assignableUsers = usuarios.filter((u) => !superAdminUserIds.has(u.id));
 
   const openModal = () => {
-    setUsuarioId(usuarios[0]?.id || 0);
+    setUsuarioId(assignableUsers[0]?.id || 0);
     setRolId(assignableRoles[0]?.id || 0);
     setShowAssignModal(true);
   };
@@ -193,7 +200,7 @@ export default function RolesPermisosPage() {
                   onChange={(e) => setUsuarioId(Number(e.target.value))}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                 >
-                  {usuarios.map((u) => (
+                  {assignableUsers.map((u) => (
                     <option key={u.id} value={u.id}>
                       {u.nombreCompleto} ({u.email})
                     </option>

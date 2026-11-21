@@ -14,7 +14,9 @@ public class LoginCommandHandler(
     public async Task<LoginResponseDto?> Handle(LoginCommand command, CancellationToken cancellationToken = default)
     {
         var usuario = await usuarioRepository.GetByEmailAsync(command.Email);
-        if (usuario is null || !usuario.Activo)
+        if (usuario is null ||
+            !usuario.Activo ||
+            !string.Equals(usuario.EstadoAcceso?.Trim(), "Activo", StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }

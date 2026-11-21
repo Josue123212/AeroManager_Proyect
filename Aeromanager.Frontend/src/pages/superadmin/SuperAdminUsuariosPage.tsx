@@ -14,7 +14,6 @@ export default function SuperAdminUsuariosPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [estadoAcceso, setEstadoAcceso] = useState('Activo');
-  const [activo, setActivo] = useState(true);
 
   const currentUserId = (() => {
     try {
@@ -61,7 +60,6 @@ export default function SuperAdminUsuariosPage() {
     setEmail('');
     setPassword('');
     setEstadoAcceso('Activo');
-    setActivo(true);
     setShowModal(true);
   };
 
@@ -70,16 +68,16 @@ export default function SuperAdminUsuariosPage() {
     setNombreCompleto(item.nombreCompleto);
     setEmail(item.email);
     setPassword('');
-    setEstadoAcceso(item.estadoAcceso || 'Activo');
-    setActivo(item.activo);
+    setEstadoAcceso(item.estadoAcceso || (item.activo ? 'Activo' : 'Suspendido'));
     setShowModal(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
-    if (editing && editing.id === currentUserId && !activo) {
-      setErrorMsg('No puedes desactivar tu propia cuenta SuperAdmin en sesión.');
+    const derivedActivo = estadoAcceso === 'Activo';
+    if (editing && editing.id === currentUserId && !derivedActivo) {
+      setErrorMsg('No puedes suspender o bloquear tu propia cuenta SuperAdmin en sesión.');
       return;
     }
 
@@ -90,7 +88,7 @@ export default function SuperAdminUsuariosPage() {
           nombreCompleto,
           email,
           estadoAcceso,
-          activo
+          activo: derivedActivo
         });
       } else {
         await axiosClient.post('/usuarios', {
@@ -310,25 +308,22 @@ export default function SuperAdminUsuariosPage() {
                 </label>
                 <select
                   value={estadoAcceso}
-                  onChange={(e) => setEstadoAcceso(e.target.value)}
-                  className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-indigo-600"
+                  disabled={editing?.id === currentUserId}
+                  onChange={(e) => {
+                    setEstadoAcceso(e.target.value);
+                  }}
+                  className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-indigo-600 disabled:bg-zinc-100"
                 >
-                  <option value="Activo">Activo</option>
-                  <option value="Suspendido">Suspendido</option>
-                  <option value="Bloqueado">Bloqueado</option>
+                  <option value="Activo">Activo (permite iniciar sesión)</option>
+                  <option value="Suspendido">Suspendido (bloquea acceso)</option>
+                  <option value="Bloqueado">Bloqueado (bloquea acceso)</option>
                 </select>
+                {editing?.id === currentUserId && (
+                  <p className="text-[11px] text-zinc-500 mt-1">
+                    No puedes suspender o bloquear tu propia cuenta en sesión.
+                  </p>
+                )}
               </div>
-              {editing && (
-                <label className="flex items-center gap-2 text-xs font-medium text-zinc-700">
-                  <input
-                    type="checkbox"
-                    checked={activo}
-                    disabled={editing.id === currentUserId}
-                    onChange={(e) => setActivo(e.target.checked)}
-                  />
-                  <span>Cuenta activa (permite iniciar sesión)</span>
-                </label>
-              )}
               <div className="flex justify-end gap-2 pt-2 border-t border-zinc-200">
                 <button
                   type="button"

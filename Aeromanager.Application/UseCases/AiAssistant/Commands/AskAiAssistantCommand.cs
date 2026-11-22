@@ -20,7 +20,7 @@ public class AskAiAssistantCommandHandler(
         var vuelos = (await vueloRepository.GetAllAsync()).Where(x => x.Activo).ToList();
         var reservas = (await reservaRepository.GetAllAsync()).Where(x => x.Activo).ToList();
 
-        var contexto = $"Estado actual en Neon Cloud DB: {aeropuertos} sedes aeroportuarias IATA activas, " +
+        var contexto = $"Estado actual del sistema: {aeropuertos} sedes aeroportuarias IATA activas, " +
                        $"{aviones} aeronaves en flota, {vuelos.Count} vuelos programados, " +
                        $"{reservas.Count} reservas confirmadas (${reservas.Sum(r => r.MontoTotal):N2} USD).";
 

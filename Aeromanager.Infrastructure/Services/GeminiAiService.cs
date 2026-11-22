@@ -12,48 +12,64 @@ public class GeminiAiService(HttpClient httpClient, IConfiguration configuration
         var apiKey = configuration["GeminiSettings:ApiKey"];
         if (!string.IsNullOrWhiteSpace(apiKey))
         {
-            try
+            var promptText =
+                $"Eres el Copilot Operativo de AeroManager. Contexto actual en vivo del sistema: {contextoOperativo}. " +
+                $"Responde de forma ejecutiva y breve en español a la consulta del administrador: {preguntaUsuario}";
+
+            var payload = new
             {
-                var url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={apiKey}";
-                var payload = new
+                contents = new[]
                 {
-                    contents = new[]
+                    new
                     {
-                        new
+                        role = "user",
+                        parts = new[]
                         {
-                            parts = new[]
-                            {
-                                new { text = $"Eres el Copilot Operativo de AeroManager. Contexto actual en vivo de la BD Neon PostgreSQL: {contextoOperativo}. Responde de forma ejecutiva y breve en español a la consulta del administrador: {preguntaUsuario}" }
-                            }
+                            new { text = promptText }
                         }
                     }
-                };
+                }
+            };
 
-                var response = await httpClient.PostAsJsonAsync(url, payload);
-                if (response.IsSuccessStatusCode)
+            var endpoints = new[]
+            {
+                $"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={apiKey}",
+                $"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={apiKey}",
+                $"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key={apiKey}",
+                $"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key={apiKey}",
+                $"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key={apiKey}"
+            };
+
+            foreach (var url in endpoints)
+            {
+                try
                 {
-                    using var doc = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
-                    var text = doc.RootElement
-                        .GetProperty("candidates")[0]
-                        .GetProperty("content")
-                        .GetProperty("parts")[0]
-                        .GetProperty("text")
-                        .GetString();
-
-                    if (!string.IsNullOrWhiteSpace(text))
+                    var response = await httpClient.PostAsJsonAsync(url, payload);
+                    if (response.IsSuccessStatusCode)
                     {
-                        return text;
+                        using var doc = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
+                        var text = doc.RootElement
+                            .GetProperty("candidates")[0]
+                            .GetProperty("content")
+                            .GetProperty("parts")[0]
+                            .GetProperty("text")
+                            .GetString();
+
+                        if (!string.IsNullOrWhiteSpace(text))
+                        {
+                            return text;
+                        }
                     }
                 }
-            }
-            catch
-            {
-                // Fallback analítico local en caso de límite de cuota externa
+                catch
+                {
+                    // Intentar siguiente endpoint o fallback analítico local
+                }
             }
         }
 
-        return $"[Copilot Operativo AeroManager — Telemetría Neon Cloud]\n" +
+        return $"[Copilot Operativo AeroManager]\n" +
                $"• Estado Analizado: {contextoOperativo}\n" +
-               $"• Respuesta a \"{preguntaUsuario}\": Se recomienda priorizar la apertura de puertas de embarque (Gates) 45 minutos antes de la salida programada y verificar que los asientos en estado Disponible en AsientoVuelo mantengan bloqueo transaccional activo durante el turno.";
+               $"• Respuesta a \"{preguntaUsuario}\": Se recomienda priorizar la apertura de puertas de embarque (Gates) 45 minutos antes de la salida programada y verificar que los asientos disponibles mantengan su control de reserva activo durante el turno.";
     }
 }

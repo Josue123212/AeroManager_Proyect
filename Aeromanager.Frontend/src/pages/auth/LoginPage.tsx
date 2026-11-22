@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import axiosClient, { extractApiError } from '../../api/axiosClient';
-import { getHomePathForRoles } from '../../components/auth/ProtectedRoute';
+import { getHomePathForRoles, getSessionHomePath } from '../../components/auth/ProtectedRoute';
 import { LoginResponseDto, RolActivoType } from '../../types/models';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const activeSessionPath = getSessionHomePath();
+  if (activeSessionPath !== '/login') {
+    return <Navigate to={activeSessionPath} replace />;
+  }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);

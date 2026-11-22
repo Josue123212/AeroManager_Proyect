@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import LoginPage from './pages/auth/LoginPage';
-import ProtectedRoute from './components/auth/ProtectedRoute';
+import ProtectedRoute, { getSessionHomePath } from './components/auth/ProtectedRoute';
 import AdminHeader from './components/layout/AdminHeader';
 import OperatorSidebar from './components/layout/OperatorSidebar';
 import CounterNavbar from './components/layout/CounterNavbar';
@@ -36,10 +36,14 @@ import PadronPasajerosCounterPage from './pages/counter/PadronPasajerosCounterPa
 import MapaCabinaReservaPage from './pages/counter/MapaCabinaReservaPage';
 import HistorialTicketsCounterPage from './pages/counter/HistorialTicketsCounterPage';
 
+function RootRedirect() {
+  return <Navigate to={getSessionHomePath()} replace />;
+}
+
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<RootRedirect />} />
       <Route path="/login" element={<LoginPage />} />
       <Route
         path="/superadmin/*"

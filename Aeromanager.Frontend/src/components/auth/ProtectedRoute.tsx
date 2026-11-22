@@ -24,6 +24,19 @@ export function getHomePathForRoles(roles: string[]): string {
   return '/login';
 }
 
+export function getSessionHomePath(): string {
+  const token = localStorage.getItem('aeromanager_token');
+  const rawUser = localStorage.getItem('aeromanager_user');
+  if (!token || !rawUser) return '/login';
+  try {
+    const parsed = JSON.parse(rawUser) as Partial<StoredUser>;
+    const roles = Array.isArray(parsed?.roles) ? parsed.roles : [];
+    return roles.length > 0 ? getHomePathForRoles(roles) : '/login';
+  } catch {
+    return '/login';
+  }
+}
+
 export default function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) {
   const token = localStorage.getItem('aeromanager_token');
   const rawUser = localStorage.getItem('aeromanager_user');

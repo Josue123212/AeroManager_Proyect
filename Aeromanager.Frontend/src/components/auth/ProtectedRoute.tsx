@@ -59,9 +59,15 @@ export default function ProtectedRoute({ allowedRoles, children }: ProtectedRout
     return <Navigate to="/login" replace />;
   }
 
-  const hasPermission = allowedRoles.some((allowed) =>
-    userRoles.some((ur) => ur.trim().toLowerCase() === allowed.trim().toLowerCase())
+  const isSuperAdmin = userRoles.some(
+    (ur) => ur.trim().toLowerCase() === 'superadmin'
   );
+
+  const hasPermission =
+    isSuperAdmin ||
+    allowedRoles.some((allowed) =>
+      userRoles.some((ur) => ur.trim().toLowerCase() === allowed.trim().toLowerCase())
+    );
 
   if (!hasPermission) {
     return <Navigate to={getHomePathForRoles(userRoles)} replace />;

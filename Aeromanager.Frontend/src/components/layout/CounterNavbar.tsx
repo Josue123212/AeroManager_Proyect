@@ -21,8 +21,9 @@ export default function CounterNavbar({ children }: CounterNavbarProps) {
     ? JSON.parse(storedUser)
     : { nombreCompleto: 'Agente de Counter', rolActivo: 'Counter', roles: [] };
   const roles: string[] = Array.isArray(user.roles) ? user.roles : [];
-  const hasAdmin = roles.some((r) => r.toLowerCase().includes('admin'));
-  const hasOperador = roles.some((r) => r.toLowerCase().includes('operador'));
+  const hasSuperAdmin = roles.some((r) => r.trim().toLowerCase() === 'superadmin');
+  const hasAdmin = hasSuperAdmin || roles.some((r) => r.toLowerCase().includes('admin'));
+  const hasOperador = hasSuperAdmin || roles.some((r) => r.toLowerCase().includes('operador'));
 
   useEffect(() => {
     const updateClock = () => {
@@ -85,7 +86,17 @@ export default function CounterNavbar({ children }: CounterNavbarProps) {
               <span>{utcTime}</span>
             </div>
 
-            {hasAdmin && (
+            {hasSuperAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate('/superadmin/ver/counter/cartelera')}
+                className="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-semibold flex items-center gap-1 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[14px]">exit_to_app</span>
+                <span>Salir de vista Counter</span>
+              </button>
+            )}
+            {!hasSuperAdmin && hasAdmin && (
               <button
                 type="button"
                 onClick={() => navigate('/admin/dashboard')}
@@ -94,7 +105,7 @@ export default function CounterNavbar({ children }: CounterNavbarProps) {
                 Admin
               </button>
             )}
-            {hasOperador && (
+            {!hasSuperAdmin && hasOperador && (
               <button
                 type="button"
                 onClick={() => navigate('/operador/fids')}

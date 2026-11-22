@@ -65,8 +65,9 @@ export default function AdminHeader({ children }: AdminHeaderProps) {
     ? JSON.parse(storedUser)
     : { nombreCompleto: 'Administrador', rolActivo: 'Administrador', roles: [] };
   const roles: string[] = Array.isArray(user.roles) ? user.roles : [];
-  const hasOperador = roles.some((r) => r.toLowerCase().includes('operador'));
-  const hasCounter = roles.some((r) => r.toLowerCase().includes('counter'));
+  const hasSuperAdmin = roles.some((r) => r.trim().toLowerCase() === 'superadmin');
+  const hasOperador = hasSuperAdmin || roles.some((r) => r.toLowerCase().includes('operador'));
+  const hasCounter = hasSuperAdmin || roles.some((r) => r.toLowerCase().includes('counter'));
 
   useEffect(() => {
     const updateClock = () => {
@@ -151,7 +152,17 @@ export default function AdminHeader({ children }: AdminHeaderProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            {hasOperador && (
+            {hasSuperAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate('/superadmin/ver/admin/dashboard')}
+                className="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[15px]">exit_to_app</span>
+                <span>Salir de vista Administrador</span>
+              </button>
+            )}
+            {!hasSuperAdmin && hasOperador && (
               <button
                 type="button"
                 onClick={() => navigate('/operador/fids')}
@@ -160,7 +171,7 @@ export default function AdminHeader({ children }: AdminHeaderProps) {
                 Consola Operador
               </button>
             )}
-            {hasCounter && (
+            {!hasSuperAdmin && hasCounter && (
               <button
                 type="button"
                 onClick={() => navigate('/counter/cartelera')}

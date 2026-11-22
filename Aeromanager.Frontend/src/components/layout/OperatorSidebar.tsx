@@ -23,8 +23,9 @@ export default function OperatorSidebar({ children }: OperatorSidebarProps) {
     ? JSON.parse(storedUser)
     : { nombreCompleto: 'Operador de Vuelos', rolActivo: 'Operador', roles: [] };
   const roles: string[] = Array.isArray(user.roles) ? user.roles : [];
-  const hasAdmin = roles.some((r) => r.toLowerCase().includes('admin'));
-  const hasCounter = roles.some((r) => r.toLowerCase().includes('counter'));
+  const hasSuperAdmin = roles.some((r) => r.trim().toLowerCase() === 'superadmin');
+  const hasAdmin = hasSuperAdmin || roles.some((r) => r.toLowerCase().includes('admin'));
+  const hasCounter = hasSuperAdmin || roles.some((r) => r.toLowerCase().includes('counter'));
 
   useEffect(() => {
     const updateClock = () => {
@@ -103,7 +104,17 @@ export default function OperatorSidebar({ children }: OperatorSidebarProps) {
           </div>
 
           <div className="flex items-center gap-3">
-            {hasAdmin && (
+            {hasSuperAdmin && (
+              <button
+                type="button"
+                onClick={() => navigate('/superadmin/ver/operador/fids')}
+                className="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[15px]">exit_to_app</span>
+                <span>Salir de vista Operador</span>
+              </button>
+            )}
+            {!hasSuperAdmin && hasAdmin && (
               <button
                 type="button"
                 onClick={() => navigate('/admin/dashboard')}
@@ -112,7 +123,7 @@ export default function OperatorSidebar({ children }: OperatorSidebarProps) {
                 Consola Admin
               </button>
             )}
-            {hasCounter && (
+            {!hasSuperAdmin && hasCounter && (
               <button
                 type="button"
                 onClick={() => navigate('/counter/cartelera')}

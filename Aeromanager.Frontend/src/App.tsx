@@ -54,6 +54,32 @@ export default function App() {
                 <Route path="dashboard" element={<SuperAdminDashboardPage />} />
                 <Route path="usuarios" element={<SuperAdminUsuariosPage />} />
                 <Route path="roles-permisos" element={<SuperAdminRolesPermisosPage />} />
+                <Route path="ver/admin/dashboard" element={<DashboardEjecutivoPage />} />
+                <Route path="ver/admin/paises" element={<PaisesPage />} />
+                <Route path="ver/admin/ciudades" element={<CiudadesPage />} />
+                <Route path="ver/admin/tipos-documento" element={<TiposDocumentoPage />} />
+                <Route path="ver/admin/aeropuertos" element={<AeropuertosPage />} />
+                <Route path="ver/admin/terminales" element={<TerminalesPage />} />
+                <Route path="ver/admin/puertas-embarque" element={<PuertasEmbarquePage />} />
+                <Route path="ver/admin/aerolineas" element={<AerolineasPage />} />
+                <Route path="ver/admin/modelos-avion" element={<ModelosAvionPage />} />
+                <Route path="ver/admin/aviones" element={<AvionesPage />} />
+                <Route path="ver/admin/clases-asiento" element={<ClasesAsientoPage />} />
+                <Route path="ver/admin/asientos" element={<AsientosPage />} />
+                <Route path="ver/admin/usuarios" element={<UsuariosPage />} />
+                <Route path="ver/admin/roles-permisos" element={<RolesPermisosPage />} />
+                <Route path="ver/admin/reportes-excel" element={<ReportesExcelPage />} />
+                <Route path="ver/admin/asistente-ia" element={<AsistenteIaPage />} />
+                <Route path="ver/operador/fids" element={<MonitorFidsPage />} />
+                <Route path="ver/operador/rutas" element={<RutasOperadorPage />} />
+                <Route path="ver/operador/vuelos" element={<ProgramacionVuelosPage />} />
+                <Route path="ver/operador/cabina" element={<DisponibilidadCabinaPage />} />
+                <Route path="ver/operador/gates" element={<MonitorGatesPage />} />
+                <Route path="ver/operador/flota" element={<FlotaOperativaPage />} />
+                <Route path="ver/counter/cartelera" element={<CarteleraVuelosCounterPage />} />
+                <Route path="ver/counter/cabina" element={<MapaCabinaReservaPage />} />
+                <Route path="ver/counter/pasajeros" element={<PadronPasajerosCounterPage />} />
+                <Route path="ver/counter/tickets" element={<HistorialTicketsCounterPage />} />
                 <Route path="*" element={<SuperAdminDashboardPage />} />
               </Routes>
             </SuperAdminHeader>

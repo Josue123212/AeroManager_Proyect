@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axiosClient, { extractApiError } from '../../api/axiosClient';
+import { useScopedNavigate } from '../../utils/scopedNavigation';
 import {
   AeropuertoDto,
   AsientoDto,
@@ -15,7 +15,7 @@ import {
 } from '../../types/models';
 
 export default function MapaCabinaReservaPage() {
-  const navigate = useNavigate();
+  const navigate = useScopedNavigate();
   const [vuelos, setVuelos] = useState<VueloDto[]>([]);
   const [rutas, setRutas] = useState<RutaDto[]>([]);
   const [aeropuertos, setAeropuertos] = useState<AeropuertoDto[]>([]);

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axiosClient, { extractApiError } from '../../api/axiosClient';
+import { useScopedNavigate } from '../../utils/scopedNavigation';
 import {
   DetalleReservaDto,
   PaisDto,
@@ -9,7 +9,7 @@ import {
 } from '../../types/models';
 
 export default function PadronPasajerosCounterPage() {
-  const navigate = useNavigate();
+  const navigate = useScopedNavigate();
   const [pasajeros, setPasajeros] = useState<PasajeroDto[]>([]);
   const [tiposDoc, setTiposDoc] = useState<TipoDocumentoDto[]>([]);
   const [paises, setPaises] = useState<PaisDto[]>([]);

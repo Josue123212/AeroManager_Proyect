@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import axiosClient, { extractApiError } from '../../api/axiosClient';
+import { resolveScopedPath } from '../../utils/scopedNavigation';
 import { AeropuertoDto, AvionDto, ReservaDto, RutaDto, VueloDto } from '../../types/models';
 
 export default function DashboardEjecutivoPage() {
+  const { pathname } = useLocation();
   const [aeropuertos, setAeropuertos] = useState<AeropuertoDto[]>([]);
   const [aviones, setAviones] = useState<AvionDto[]>([]);
   const [vuelos, setVuelos] = useState<VueloDto[]>([]);
@@ -136,7 +138,7 @@ export default function DashboardEjecutivoPage() {
           <div className="flex items-center justify-between text-xs pt-1 border-t border-zinc-100">
             <span className="font-mono-code text-zinc-500">Sistema AeroManager</span>
             <Link
-              to="/admin/aeropuertos"
+              to={resolveScopedPath(pathname, '/admin/aeropuertos')}
               className="text-emerald-700 font-semibold font-mono-code text-[11px] bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded hover:bg-emerald-100"
             >
               Ver Sedes →
@@ -241,14 +243,14 @@ export default function DashboardEjecutivoPage() {
 
           <div className="flex items-center gap-2 flex-wrap">
             <Link
-              to="/admin/reportes-excel"
+              to={resolveScopedPath(pathname, '/admin/reportes-excel')}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-emerald-700 bg-white hover:bg-emerald-50 border border-emerald-300 text-xs font-semibold transition-colors shadow-2xs"
             >
               <span className="material-symbols-outlined text-[17px]">table_chart</span>
               <span>Ir a Reportes Excel (.xls)</span>
             </Link>
             <Link
-              to="/admin/asistente-ia"
+              to={resolveScopedPath(pathname, '/admin/asistente-ia')}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-white bg-[#0284C7] hover:bg-[#0369A1] text-xs font-semibold transition-colors shadow-2xs"
             >
               <span className="material-symbols-outlined text-[17px]">smart_toy</span>

@@ -42,7 +42,7 @@ export default function LoginPage() {
       localStorage.setItem(
         'aeromanager_user',
         JSON.stringify({
-          usuarioId: data.usuarioId,
+          usuarioId: data.id ?? data.usuarioId,
           nombreCompleto: data.nombreCompleto,
           email: data.email,
           rolActivo: primaryRole,

@@ -15,14 +15,26 @@ export default function SuperAdminUsuariosPage() {
   const [password, setPassword] = useState('');
   const [estadoAcceso, setEstadoAcceso] = useState('Activo');
 
-  const currentUserId = (() => {
+  const { currentUserId, currentUserEmail } = (() => {
     try {
       const raw = localStorage.getItem('aeromanager_user');
-      return raw ? Number(JSON.parse(raw).usuarioId || 0) : 0;
+      if (!raw) return { currentUserId: 0, currentUserEmail: '' };
+      const parsed = JSON.parse(raw);
+      return {
+        currentUserId: Number(parsed.usuarioId || parsed.id || 0),
+        currentUserEmail: String(parsed.email || '').trim().toLowerCase()
+      };
     } catch {
-      return 0;
+      return { currentUserId: 0, currentUserEmail: '' };
     }
   })();
+
+  const isUserSelf = (u: UsuarioDto) =>
+    u.id === currentUserId ||
+    (Boolean(currentUserEmail) && u.email.trim().toLowerCase() === currentUserEmail);
+
+  const isUserSuperAdmin = (userId: number) =>
+    getUserRoles(userId).some((r) => r.trim().toLowerCase() === 'superadmin');
 
   const loadData = async () => {
     setLoading(true);
@@ -76,8 +88,8 @@ export default function SuperAdminUsuariosPage() {
     e.preventDefault();
     setErrorMsg(null);
     const derivedActivo = estadoAcceso === 'Activo';
-    if (editing && editing.id === currentUserId && !derivedActivo) {
-      setErrorMsg('No puedes suspender o bloquear tu propia cuenta SuperAdmin en sesión.');
+    if (editing && (isUserSelf(editing) || isUserSuperAdmin(editing.id)) && !derivedActivo) {
+      setErrorMsg('No puedes suspender o bloquear una cuenta SuperAdmin.');
       return;
     }
 
@@ -106,8 +118,8 @@ export default function SuperAdminUsuariosPage() {
   };
 
   const toggleStatus = async (item: UsuarioDto) => {
-    if (item.id === currentUserId) {
-      setErrorMsg('No puedes suspender o desactivar tu propia cuenta SuperAdmin en sesión.');
+    if (isUserSelf(item) || isUserSuperAdmin(item.id)) {
+      setErrorMsg('No puedes suspender o desactivar una cuenta SuperAdmin.');
       return;
     }
     setErrorMsg(null);
@@ -175,7 +187,8 @@ export default function SuperAdminUsuariosPage() {
             ) : (
               usuarios.map((item) => {
                 const userRoles = getUserRoles(item.id);
-                const isSelf = item.id === currentUserId;
+                const isSelf = isUserSelf(item);
+                const isProtected = isSelf || userRoles.some((r) => r.trim().toLowerCase() === 'superadmin');
                 return (
                   <tr key={item.id} className="hover:bg-zinc-50">
                     <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
@@ -228,7 +241,7 @@ export default function SuperAdminUsuariosPage() {
                       </button>
                       <button
                         type="button"
-                        disabled={isSelf}
+                        disabled={isProtected}
                         onClick={() => toggleStatus(item)}
                         className={`px-2.5 py-1 rounded text-[11px] font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                           item.activo
@@ -308,7 +321,7 @@ export default function SuperAdminUsuariosPage() {
                 </label>
                 <select
                   value={estadoAcceso}
-                  disabled={editing?.id === currentUserId}
+                  disabled={Boolean(editing && (isUserSelf(editing) || isUserSuperAdmin(editing.id)))}
                   onChange={(e) => {
                     setEstadoAcceso(e.target.value);
                   }}
@@ -318,9 +331,9 @@ export default function SuperAdminUsuariosPage() {
                   <option value="Suspendido">Suspendido (bloquea acceso)</option>
                   <option value="Bloqueado">Bloqueado (bloquea acceso)</option>
                 </select>
-                {editing?.id === currentUserId && (
+                {editing && (isUserSelf(editing) || isUserSuperAdmin(editing.id)) && (
                   <p className="text-[11px] text-zinc-500 mt-1">
-                    No puedes suspender o bloquear tu propia cuenta en sesión.
+                    No puedes suspender o bloquear una cuenta SuperAdmin.
                   </p>
                 )}
               </div>

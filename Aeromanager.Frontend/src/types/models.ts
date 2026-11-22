@@ -204,6 +204,7 @@ export interface LoginRequestDto {
 }
 
 export interface LoginResponseDto {
+  id?: number;
   token: string;
   usuarioId: number;
   nombreCompleto: string;

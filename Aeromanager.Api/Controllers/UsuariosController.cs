@@ -70,7 +70,8 @@ public class UsuariosController(
             return BadRequest(new { message = "No puedes desactivar tu propia cuenta en sesión." });
         }
 
-        var item = await updateHandler.Handle(command with { Id = id });
+        var callerIsSuperAdmin = User.IsInRole("SuperAdmin");
+        var item = await updateHandler.Handle(command with { Id = id }, callerIsSuperAdmin);
         if (item is null)
         {
             return NotFound();

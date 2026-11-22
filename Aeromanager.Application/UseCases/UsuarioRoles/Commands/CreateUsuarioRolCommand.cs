@@ -54,7 +54,7 @@ public class CreateUsuarioRolCommandHandler
             });
         }
 
-        var allRoles = await _rolRepository.GetAllAsync(cancellationToken);
+        var allRoles = (await _rolRepository.GetAllAsync(cancellationToken)).ToList();
         var superAdminRole = allRoles.FirstOrDefault(r =>
             r.Nombre.Trim().Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase));
         if (superAdminRole is not null)
@@ -67,6 +67,26 @@ public class CreateUsuarioRolCommandHandler
                 throw new ValidationException(new[]
                 {
                     new ValidationFailure(nameof(command.UsuarioId), "No se pueden asignar roles adicionales a una cuenta SuperAdmin.")
+                });
+            }
+        }
+
+        if (!callerIsSuperAdmin)
+        {
+            var adminRoles = allRoles
+                .Where(r => r.Nombre.Contains("Admin", StringComparison.OrdinalIgnoreCase))
+                .Select(r => r.Id)
+                .ToHashSet();
+
+            var targetUserRoles = await _repository.FindAsync(
+                ur => ur.UsuarioId == command.UsuarioId && ur.Activo,
+                cancellationToken);
+
+            if (targetUserRoles.Any(ur => adminRoles.Contains(ur.RolId)))
+            {
+                throw new ValidationException(new[]
+                {
+                    new ValidationFailure(nameof(command.UsuarioId), "Un Administrador solo puede asignar roles a cuentas operativas.")
                 });
             }
         }

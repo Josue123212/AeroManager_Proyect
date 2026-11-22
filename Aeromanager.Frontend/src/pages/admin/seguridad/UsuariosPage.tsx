@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../../api/axiosClient';
-import { UsuarioDto } from '../../../types/models';
+import { RolDto, UsuarioDto, UsuarioRolDto } from '../../../types/models';
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<UsuarioDto[]>([]);
+  const [roles, setRoles] = useState<RolDto[]>([]);
+  const [asignaciones, setAsignaciones] = useState<UsuarioRolDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -12,14 +14,19 @@ export default function UsuariosPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [estadoAcceso, setEstadoAcceso] = useState('Activo');
-  const [activo, setActivo] = useState(true);
 
   const loadData = async () => {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const res = await axiosClient.get<UsuarioDto[]>('/usuarios');
-      setUsuarios(res.data);
+      const [uRes, rRes, urRes] = await Promise.all([
+        axiosClient.get<UsuarioDto[]>('/usuarios'),
+        axiosClient.get<RolDto[]>('/roles'),
+        axiosClient.get<UsuarioRolDto[]>('/usuarioroles')
+      ]);
+      setUsuarios(uRes.data);
+      setRoles(rRes.data);
+      setAsignaciones(urRes.data);
     } catch (err: any) {
       setErrorMsg(extractApiError(err, 'No se pudo cargar la información del servidor.'));
     } finally {
@@ -31,37 +38,60 @@ export default function UsuariosPage() {
     loadData();
   }, []);
 
+  const getUserRoles = (userId: number): string[] => {
+    const activeLinks = asignaciones.filter((a) => a.usuarioId === userId && a.activo);
+    return activeLinks
+      .map((a) => roles.find((r) => r.id === a.rolId)?.nombre)
+      .filter((n): n is string => Boolean(n));
+  };
+
+  const isSuperAdminUser = (userId: number): boolean =>
+    getUserRoles(userId).some((r) => r.trim().toLowerCase() === 'superadmin');
+
+  const isAdminUser = (userId: number): boolean =>
+    getUserRoles(userId).some((r) => r.trim().toLowerCase().includes('admin'));
+
+  // Ocultar por completo las cuentas SuperAdmin en la consola de Administrador
+  const visibleUsuarios = usuarios.filter((u) => !isSuperAdminUser(u.id));
+
   const openCreate = () => {
     setEditing(null);
     setNombreCompleto('');
     setEmail('');
     setPassword('');
     setEstadoAcceso('Activo');
-    setActivo(true);
     setShowModal(true);
   };
 
   const openEdit = (item: UsuarioDto) => {
+    if (isAdminUser(item.id)) {
+      setErrorMsg('Las cuentas con rol Administrador solo pueden ser modificadas por un SuperAdmin.');
+      return;
+    }
     setEditing(item);
     setNombreCompleto(item.nombreCompleto);
     setEmail(item.email);
     setPassword('');
-    setEstadoAcceso(item.estadoAcceso || 'Activo');
-    setActivo(item.activo);
+    setEstadoAcceso(item.estadoAcceso || (item.activo ? 'Activo' : 'Suspendido'));
     setShowModal(true);
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    const derivedActivo = estadoAcceso === 'Activo';
     try {
       if (editing) {
+        if (isAdminUser(editing.id)) {
+          setErrorMsg('Un Administrador solo puede modificar cuentas operativas (Operador o Counter).');
+          return;
+        }
         await axiosClient.put(`/usuarios/${editing.id}`, {
           id: editing.id,
           nombreCompleto,
           email,
           estadoAcceso,
-          activo
+          activo: derivedActivo
         });
       } else {
         await axiosClient.post('/usuarios', {
@@ -83,11 +113,11 @@ export default function UsuariosPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <span className="text-[11px] font-bold uppercase tracking-wider text-[#0284C7]">
-            Seguridad &amp; Accesos / Personal Autorizado
+            Seguridad &amp; Accesos / Personal Operativo
           </span>
           <h1 className="text-2xl font-bold text-[#18181B]">Gestión de Usuarios</h1>
           <p className="text-xs text-zinc-500 mt-0.5">
-            Registros en vivo.
+            Administración de cuentas operativas (Operador y Counter). Las cuentas Administrador son gestionadas por SuperAdmin.
           </p>
         </div>
         <button
@@ -113,51 +143,76 @@ export default function UsuariosPage() {
               <th className="py-2.5 px-4 font-semibold">ID</th>
               <th className="py-2.5 px-4 font-semibold">Nombre Completo</th>
               <th className="py-2.5 px-4 font-semibold">Correo Institucional</th>
+              <th className="py-2.5 px-4 font-semibold">Rol Asignado</th>
               <th className="py-2.5 px-4 font-semibold">Estado Acceso</th>
               <th className="py-2.5 px-4 font-semibold">Fecha de Alta</th>
               <th className="py-2.5 px-4 font-semibold text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 text-xs">
-            {usuarios.length === 0 ? (
+            {visibleUsuarios.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-zinc-500">
-                  {loading
-                    ? 'Cargando información...'
-                    : 'No hay usuarios registrados.'}
+                <td colSpan={7} className="py-8 text-center text-zinc-500">
+                  {loading ? 'Cargando información...' : 'No hay usuarios registrados.'}
                 </td>
               </tr>
             ) : (
-              usuarios.map((item) => (
-                <tr key={item.id} className="hover:bg-zinc-50">
-                  <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
-                  <td className="py-3 px-4 font-semibold text-[#18181B]">{item.nombreCompleto}</td>
-                  <td className="py-3 px-4 font-mono-code text-[#0284C7]">{item.email}</td>
-                  <td className="py-3 px-4">
-                    <span
-                      className={`inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold ${
-                        item.activo
-                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                          : 'bg-red-50 border-red-200 text-red-700'
-                      }`}
-                    >
-                      {item.estadoAcceso || (item.activo ? 'Activo' : 'Inactivo')}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 font-mono-code text-zinc-600">
-                    {new Date(item.fechaCreacion).toLocaleDateString('es-PE')}
-                  </td>
-                  <td className="py-3 px-4 text-right">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(item)}
-                      className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
-                    >
-                      Editar
-                    </button>
-                  </td>
-                </tr>
-              ))
+              visibleUsuarios.map((item) => {
+                const userRoles = getUserRoles(item.id);
+                const protectedAdmin = isAdminUser(item.id);
+                return (
+                  <tr key={item.id} className="hover:bg-zinc-50">
+                    <td className="py-3 px-4 font-mono-code text-zinc-500">#{item.id}</td>
+                    <td className="py-3 px-4 font-semibold text-[#18181B]">{item.nombreCompleto}</td>
+                    <td className="py-3 px-4 font-mono-code text-[#0284C7]">{item.email}</td>
+                    <td className="py-3 px-4">
+                      <div className="flex flex-wrap gap-1">
+                        {userRoles.length === 0 ? (
+                          <span className="text-[11px] text-zinc-400">Sin rol</span>
+                        ) : (
+                          userRoles.map((r) => (
+                            <span
+                              key={r}
+                              className="font-mono-code text-[11px] font-bold px-2 py-0.5 rounded bg-sky-50 border border-sky-200 text-[#0284C7]"
+                            >
+                              {r}
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold ${
+                          item.activo
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                            : 'bg-red-50 border-red-200 text-red-700'
+                        }`}
+                      >
+                        {item.activo ? item.estadoAcceso || 'Activo' : 'Suspendido'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 font-mono-code text-zinc-600">
+                      {new Date(item.fechaCreacion).toLocaleDateString('es-PE')}
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      {protectedAdmin ? (
+                        <span className="inline-flex px-2.5 py-1 rounded bg-zinc-100 border border-zinc-200 text-zinc-500 text-[11px] font-semibold">
+                          Gestionado por SuperAdmin
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => openEdit(item)}
+                          className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
+                        >
+                          Editar
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -168,7 +223,7 @@ export default function UsuariosPage() {
           <div className="w-full max-w-md bg-white border border-zinc-200 rounded-xl shadow-xl overflow-hidden">
             <div className="px-5 py-4 bg-[#F4F4F5] border-b border-zinc-200 flex items-center justify-between">
               <h3 className="text-sm font-bold text-[#18181B]">
-                {editing ? 'Editar Cuenta de Usuario' : 'Registrar Nuevo Usuario'}
+                {editing ? 'Editar Cuenta Operativa' : 'Registrar Nuevo Usuario Operativo'}
               </h3>
               <button
                 type="button"
@@ -213,6 +268,7 @@ export default function UsuariosPage() {
                   <input
                     type="password"
                     required
+                    minLength={6}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••••"
@@ -229,8 +285,8 @@ export default function UsuariosPage() {
                   onChange={(e) => setEstadoAcceso(e.target.value)}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                 >
-                  <option value="Activo">Activo</option>
-                  <option value="Suspendido">Suspendido</option>
+                  <option value="Activo">Activo (permite iniciar sesión)</option>
+                  <option value="Suspendido">Suspendido (bloquea acceso)</option>
                 </select>
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t border-zinc-200">

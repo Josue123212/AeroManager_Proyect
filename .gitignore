@@ -492,3 +492,7 @@ stitch_aeromanager__counter_dashboard/
 .vite/
 dist/
 *.tsbuildinfo
+
+# Local Release publish outputs (Lab 14)
+publish_local/
+published/

@@ -37,18 +37,20 @@ var app = builder.Build();
 app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
-// Configurar Swagger
+// Configurar Swagger (habilitado también en Producción para Render)
+app.MapOpenApi();
+app.UseSwaggerUi(options =>
+{
+    options.DocumentPath = "/openapi/v1.json";
+});
+
+app.MapGet("/", () => Results.Redirect("/swagger"));
+
+// Configurar peticiones HTTP (Render gestiona HTTPS en su proxy inverso)
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
-    app.UseSwaggerUi(options =>
-    {
-        options.DocumentPath = "/openapi/v1.json";
-    });
+    app.UseHttpsRedirection();
 }
-
-// Configurar peticiones HTTP
-app.UseHttpsRedirection();
 
 // Habilitar CORS
 app.UseCors("AllowFrontend");

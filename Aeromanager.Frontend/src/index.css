@@ -19,3 +19,74 @@
   vertical-align: middle;
 }
 
+/* Tema oscuro descansado (Dark Dimmed) para Consola SuperAdmin y vistas embebidas */
+.superadmin-dark {
+  background-color: #0F172A;
+  color: #E2E8F0;
+}
+
+.superadmin-dark .bg-white {
+  background-color: #1E293B;
+}
+
+.superadmin-dark .bg-\[\#F4F4F5\],
+.superadmin-dark .bg-\[\#F8FAFC\],
+.superadmin-dark .bg-zinc-50,
+.superadmin-dark .bg-zinc-100,
+.superadmin-dark .bg-zinc-100\/80,
+.superadmin-dark .bg-slate-50,
+.superadmin-dark .bg-slate-100,
+.superadmin-dark .bg-slate-100\/80 {
+  background-color: #162032;
+}
+
+.superadmin-dark .hover\:bg-zinc-50:hover,
+.superadmin-dark .hover\:bg-slate-50:hover,
+.superadmin-dark .hover\:bg-zinc-200:hover {
+  background-color: #253349;
+}
+
+.superadmin-dark .border-zinc-200,
+.superadmin-dark .border-zinc-300,
+.superadmin-dark .border-slate-200,
+.superadmin-dark .border-slate-300 {
+  border-color: #334155;
+}
+
+.superadmin-dark .divide-zinc-200 > :not([hidden]) ~ :not([hidden]),
+.superadmin-dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #334155;
+}
+
+.superadmin-dark .text-\[\#18181B\],
+.superadmin-dark .text-\[\#0F172A\],
+.superadmin-dark .text-zinc-900,
+.superadmin-dark .text-zinc-800,
+.superadmin-dark .text-slate-800 {
+  color: #F1F5F9;
+}
+
+.superadmin-dark .text-zinc-700,
+.superadmin-dark .text-zinc-600,
+.superadmin-dark .text-slate-700,
+.superadmin-dark .text-slate-600 {
+  color: #CBD5E1;
+}
+
+.superadmin-dark .text-zinc-500,
+.superadmin-dark .text-slate-500 {
+  color: #94A3B8;
+}
+
+.superadmin-dark input,
+.superadmin-dark select,
+.superadmin-dark textarea {
+  background-color: #0F172A;
+  color: #F1F5F9;
+  border-color: #334155;
+}
+
+.superadmin-dark input::placeholder,
+.superadmin-dark textarea::placeholder {
+  color: #64748B;
+}

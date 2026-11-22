@@ -432,10 +432,15 @@ export default function ProgramacionVuelosPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
+                  <label
+                    htmlFor="vuelo-numero"
+                    className="block text-[11px] font-bold uppercase text-zinc-700 mb-1"
+                  >
                     Número de Vuelo (Ej. AM-510)
                   </label>
                   <input
+                    id="vuelo-numero"
+                    name="numeroVuelo"
                     type="text"
                     required
                     value={numeroVuelo}
@@ -446,10 +451,15 @@ export default function ProgramacionVuelosPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
+                  <label
+                    htmlFor="vuelo-ruta"
+                    className="block text-[11px] font-bold uppercase text-zinc-700 mb-1"
+                  >
                     Seleccionar Ruta Aérea
                   </label>
                   <select
+                    id="vuelo-ruta"
+                    name="rutaId"
                     required
                     value={rutaId}
                     onChange={(e) => setRutaId(Number(e.target.value))}
@@ -466,10 +476,15 @@ export default function ProgramacionVuelosPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
+                  <label
+                    htmlFor="vuelo-avion"
+                    className="block text-[11px] font-bold uppercase text-zinc-700 mb-1"
+                  >
                     Seleccionar Avión Operativo
                   </label>
                   <select
+                    id="vuelo-avion"
+                    name="avionId"
                     required
                     value={avionId}
                     onChange={(e) => {
@@ -489,10 +504,15 @@ export default function ProgramacionVuelosPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
+                  <label
+                    htmlFor="vuelo-puerta"
+                    className="block text-[11px] font-bold uppercase text-zinc-700 mb-1"
+                  >
                     Puerta de Embarque (Gate)
                   </label>
                   <select
+                    id="vuelo-puerta"
+                    name="puertaEmbarqueId"
                     required
                     value={puertaEmbarqueId}
                     onChange={(e) => setPuertaEmbarqueId(Number(e.target.value))}
@@ -509,10 +529,15 @@ export default function ProgramacionVuelosPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
+                  <label
+                    htmlFor="vuelo-salida"
+                    className="block text-[11px] font-bold uppercase text-zinc-700 mb-1"
+                  >
                     Fecha y Hora de Salida (STD)
                   </label>
                   <input
+                    id="vuelo-salida"
+                    name="fechaHoraSalida"
                     type="datetime-local"
                     required
                     value={fechaHoraSalida}
@@ -522,10 +547,15 @@ export default function ProgramacionVuelosPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
+                  <label
+                    htmlFor="vuelo-llegada"
+                    className="block text-[11px] font-bold uppercase text-zinc-700 mb-1"
+                  >
                     Fecha y Hora de Llegada (STA)
                   </label>
                   <input
+                    id="vuelo-llegada"
+                    name="fechaHoraLlegada"
                     type="datetime-local"
                     required
                     value={fechaHoraLlegada}
@@ -537,13 +567,19 @@ export default function ProgramacionVuelosPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
+                  <label
+                    htmlFor="vuelo-capacidad"
+                    className="block text-[11px] font-bold uppercase text-zinc-700 mb-1"
+                  >
                     Capacidad del Vuelo (&gt; 0)
                   </label>
                   <input
+                    id="vuelo-capacidad"
+                    name="capacidadVuelo"
                     type="number"
                     required
                     min={1}
+                    max={900}
                     value={capacidadVuelo}
                     onChange={(e) => setCapacidadVuelo(Number(e.target.value))}
                     className="w-full h-9 px-3 rounded border border-zinc-300 font-mono-code text-xs outline-none focus:border-[#0284C7]"
@@ -551,14 +587,20 @@ export default function ProgramacionVuelosPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
+                  <label
+                    htmlFor="vuelo-precio"
+                    className="block text-[11px] font-bold uppercase text-zinc-700 mb-1"
+                  >
                     Precio Base (USD &gt; 0)
                   </label>
                   <input
+                    id="vuelo-precio"
+                    name="precioBase"
                     type="number"
                     step="0.50"
                     required
                     min={1}
+                    max={50000}
                     value={precioBase}
                     onChange={(e) => setPrecioBase(Number(e.target.value))}
                     className="w-full h-9 px-3 rounded border border-zinc-300 font-mono-code text-xs outline-none focus:border-[#0284C7]"
@@ -566,10 +608,15 @@ export default function ProgramacionVuelosPage() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
+                  <label
+                    htmlFor="vuelo-estado"
+                    className="block text-[11px] font-bold uppercase text-zinc-700 mb-1"
+                  >
                     Estado Operativo
                   </label>
                   <select
+                    id="vuelo-estado"
+                    name="estado"
                     value={estado}
                     onChange={(e) => setEstado(e.target.value)}
                     className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"

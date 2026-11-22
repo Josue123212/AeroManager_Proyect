@@ -11,7 +11,6 @@ import {
   PuertaEmbarqueDto,
   ReservaDto,
   RutaDto,
-  UsuarioDto,
   VueloDto
 } from '../../types/models';
 
@@ -26,7 +25,6 @@ export default function MapaCabinaReservaPage() {
   const [clases, setClases] = useState<ClaseAsientoDto[]>([]);
   const [asientosVuelo, setAsientosVuelo] = useState<AsientoVueloDto[]>([]);
   const [pasajeros, setPasajeros] = useState<PasajeroDto[]>([]);
-  const [usuarios, setUsuarios] = useState<UsuarioDto[]>([]);
 
   const [selectedVueloId, setSelectedVueloId] = useState<number>(0);
   const [selectedAsientoVueloId, setSelectedAsientoVueloId] = useState<number>(0);
@@ -51,7 +49,7 @@ export default function MapaCabinaReservaPage() {
     setLoading(true);
     setErrorMsg(null);
     try {
-      const [vRes, rRes, aeRes, avRes, puRes, asRes, clRes, avuRes, paRes, usRes] =
+      const [vRes, rRes, aeRes, avRes, puRes, asRes, clRes, avuRes, paRes] =
         await Promise.all([
           axiosClient.get<VueloDto[]>('/vuelos'),
           axiosClient.get<RutaDto[]>('/rutas'),
@@ -61,8 +59,7 @@ export default function MapaCabinaReservaPage() {
           axiosClient.get<AsientoDto[]>('/asientos'),
           axiosClient.get<ClaseAsientoDto[]>('/clasesasiento'),
           axiosClient.get<AsientoVueloDto[]>('/asientosvuelo'),
-          axiosClient.get<PasajeroDto[]>('/pasajeros'),
-          axiosClient.get<UsuarioDto[]>('/usuarios')
+          axiosClient.get<PasajeroDto[]>('/pasajeros')
         ]);
       setVuelos(vRes.data);
       setRutas(rRes.data);
@@ -73,7 +70,6 @@ export default function MapaCabinaReservaPage() {
       setClases(clRes.data);
       setAsientosVuelo(avuRes.data);
       setPasajeros(paRes.data);
-      setUsuarios(usRes.data);
 
       const savedVuelo = Number(localStorage.getItem('aeromanager_counter_vuelo_id') || 0);
       const savedPasajero = Number(localStorage.getItem('aeromanager_counter_pasajero_id') || 0);
@@ -211,13 +207,10 @@ export default function MapaCabinaReservaPage() {
         return;
       }
 
-      // 2. Obtener un UsuarioRegistroId válido existente en la tabla Usuario de el sistema
+      // 2. Obtener el UsuarioRegistroId del agente en sesión
       const storedUser = localStorage.getItem('aeromanager_user');
       const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-      const validUsuarioId =
-        usuarios.find((u) => u.id === parsedUser?.usuarioId)?.id ||
-        usuarios[0]?.id ||
-        1;
+      const validUsuarioId = Number(parsedUser?.usuarioId) || 1;
 
       // 3. Crear cabecera Reserva
       const reservaRes = await axiosClient.post<ReservaDto>('/reservas', {

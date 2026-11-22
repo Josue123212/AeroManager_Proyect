@@ -13,6 +13,9 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 // Configurar OpenAPI
 builder.Services.AddOpenApi();
+builder.Services
+    .AddAuthentication("Bearer")
+    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, BearerAuthenticationHandler>("Bearer", null);
 builder.Services.AddAuthorization();
 
 // Configurar CORS
@@ -49,7 +52,7 @@ app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
 
 // Autenticación JWT y autorización
-app.UseMiddleware<JwtAuthMiddleware>();
+app.UseAuthentication();
 app.UseAuthorization();
 
 // Mapear controladores

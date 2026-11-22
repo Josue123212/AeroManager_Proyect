@@ -1,29 +1,64 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.Extensions.Options;
 
 namespace Aeromanager.Api.Middlewares;
 
-public sealed class JwtAuthMiddleware(
-    RequestDelegate next,
+public sealed class BearerAuthenticationHandler(
+    IOptionsMonitor<AuthenticationSchemeOptions> options,
+    ILoggerFactory logger,
+    UrlEncoder encoder,
     IConfiguration configuration)
+    : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
-    public async Task InvokeAsync(HttpContext context)
+    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
-        if (!string.IsNullOrWhiteSpace(authHeader) &&
-            authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        var authHeader = Request.Headers.Authorization.FirstOrDefault();
+        if (string.IsNullOrWhiteSpace(authHeader) ||
+            !authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
         {
-            var token = authHeader["Bearer ".Length..].Trim();
-            var principal = ValidateToken(token);
-            if (principal is not null)
-            {
-                context.User = principal;
-            }
+            return Task.FromResult(AuthenticateResult.NoResult());
         }
 
-        await next(context);
+        var token = authHeader["Bearer ".Length..].Trim();
+        var principal = ValidateToken(token);
+        if (principal is null)
+        {
+            return Task.FromResult(AuthenticateResult.Fail("Token JWT inválido o expirado."));
+        }
+
+        var ticket = new AuthenticationTicket(principal, Scheme.Name);
+        return Task.FromResult(AuthenticateResult.Success(ticket));
+    }
+
+    protected override async Task HandleChallengeAsync(AuthenticationProperties properties)
+    {
+        Response.StatusCode = StatusCodes.Status401Unauthorized;
+        Response.ContentType = "application/json";
+        await Response.WriteAsync(JsonSerializer.Serialize(new
+        {
+            status = 401,
+            title = "Unauthorized",
+            detail = "Debe iniciar sesión con un token JWT válido para acceder a este recurso.",
+            timestamp = DateTime.UtcNow
+        }));
+    }
+
+    protected override async Task HandleForbiddenAsync(AuthenticationProperties properties)
+    {
+        Response.StatusCode = StatusCodes.Status403Forbidden;
+        Response.ContentType = "application/json";
+        await Response.WriteAsync(JsonSerializer.Serialize(new
+        {
+            status = 403,
+            title = "Forbidden",
+            detail = "No tiene permisos suficientes para acceder a este recurso.",
+            timestamp = DateTime.UtcNow
+        }));
     }
 
     private ClaimsPrincipal? ValidateToken(string token)
@@ -86,7 +121,7 @@ public sealed class JwtAuthMiddleware(
                 }
             }
 
-            var identity = new ClaimsIdentity(claims, "Bearer");
+            var identity = new ClaimsIdentity(claims, Scheme.Name);
             return new ClaimsPrincipal(identity);
         }
         catch

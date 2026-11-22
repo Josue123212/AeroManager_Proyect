@@ -46,9 +46,11 @@ export default function OperatorSidebar({ children }: OperatorSidebarProps) {
     <div className="min-h-screen bg-[#F8FAFC] text-[#18181B]">
       <aside className="fixed left-0 top-0 h-full w-64 bg-[#F4F4F5] border-r border-zinc-200 z-50 flex flex-col">
         <div className="h-16 px-4 flex items-center gap-2.5 bg-white border-b border-zinc-200">
-          <div className="w-8 h-8 rounded bg-[#0284C7] text-white flex items-center justify-center">
-            <span className="material-symbols-outlined text-lg">flight_takeoff</span>
-          </div>
+          <img
+            src="/logo.png"
+            alt="AeroManager"
+            className="w-8 h-8 rounded object-cover"
+          />
           <div className="flex flex-col">
             <span className="text-base font-bold text-[#18181B] leading-tight">AeroManager</span>
             <span className="text-[10px] font-bold text-[#0284C7] uppercase tracking-wider">

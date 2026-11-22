@@ -70,9 +70,11 @@ export default function LoginPage() {
         <div className="w-full md:w-5/12 bg-[#F4F4F5] p-6 md:p-8 flex flex-col justify-between border-b md:border-b-0 md:border-r border-zinc-200">
           <div className="flex flex-col gap-5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-[#0284C7] text-white shadow-sm flex items-center justify-center">
-                <span className="material-symbols-outlined text-2xl">connecting_airports</span>
-              </div>
+              <img
+                src="/logo.png"
+                alt="AeroManager"
+                className="w-10 h-10 rounded-lg shadow-sm object-cover"
+              />
               <div className="flex flex-col">
                 <span className="text-xl font-bold text-[#18181B] tracking-tight leading-none">
                   AeroManager

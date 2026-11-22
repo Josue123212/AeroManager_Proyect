@@ -45,11 +45,11 @@ export default function CounterNavbar({ children }: CounterNavbarProps) {
       <header className="fixed top-0 left-0 right-0 bg-white border-b border-zinc-200 z-50 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-[#0284C7] text-white flex items-center justify-center">
-              <span className="material-symbols-outlined text-xl">
-                airline_seat_recline_normal
-              </span>
-            </div>
+            <img
+              src="/logo.png"
+              alt="AeroManager"
+              className="w-9 h-9 rounded-lg object-cover"
+            />
             <div className="flex flex-col">
               <span className="text-base font-bold text-[#18181B] leading-tight">
                 AeroManager

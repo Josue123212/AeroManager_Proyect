@@ -37,9 +37,11 @@ export default function SuperAdminHeader({ children }: SuperAdminHeaderProps) {
     <div className="min-h-screen bg-[#F8FAFC] text-[#18181B] flex flex-col">
       <header className="h-14 bg-[#0F172A] text-white border-b border-slate-800 px-4 md:px-6 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-xs">
-            <span className="material-symbols-outlined text-[20px]">security</span>
-          </div>
+          <img
+            src="/logo.png"
+            alt="AeroManager"
+            className="w-8 h-8 rounded-lg shadow-xs object-cover"
+          />
           <div className="leading-tight">
             <span className="text-sm font-bold tracking-tight block">AeroManager Governance</span>
             <span className="text-[10px] uppercase tracking-wider text-indigo-300 font-semibold">

@@ -2,6 +2,8 @@ using Aeromanager.Application;
 using Aeromanager.Infrastructure;
 using Aeromanager.Api.Middlewares;
 
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Registrar controladores

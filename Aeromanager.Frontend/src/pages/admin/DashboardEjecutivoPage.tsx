@@ -226,6 +226,253 @@ export default function DashboardEjecutivoPage() {
         </div>
       </section>
 
+      {/* Gráficos Analíticos en Tiempo Real (Circular, Barras y Línea/Área) */}
+      {(() => {
+        const activeFlights = vuelos.filter((v) => v.activo);
+        const stateCounts = [
+          {
+            label: 'Programado',
+            color: '#0284C7',
+            count: activeFlights.filter((v) => v.estado.toUpperCase().includes('PROGRAM')).length
+          },
+          {
+            label: 'En Abordaje',
+            color: '#D97706',
+            count: activeFlights.filter((v) => v.estado.toUpperCase().includes('ABORD')).length
+          },
+          {
+            label: 'En Vuelo / Aterrizado',
+            color: '#059669',
+            count: activeFlights.filter(
+              (v) => v.estado.toUpperCase().includes('VUELO') || v.estado.toUpperCase().includes('ATERRIZ')
+            ).length
+          },
+          {
+            label: 'Retrasado / Cancelado',
+            color: '#E11D48',
+            count: activeFlights.filter(
+              (v) => v.estado.toUpperCase().includes('RETRAS') || v.estado.toUpperCase().includes('CANCEL')
+            ).length
+          }
+        ];
+        const totalForDonut = Math.max(
+          stateCounts.reduce((acc, s) => acc + s.count, 0),
+          1
+        );
+        const radius = 44;
+        const circumference = 2 * Math.PI * radius;
+        let accumulatedOffset = 0;
+
+        const barFlights = activeFlights.slice(0, 6);
+        const maxFare = Math.max(...barFlights.map((v) => v.precioBase), 1);
+        const maxCap = Math.max(...barFlights.map((v) => v.capacidadVuelo), 1);
+
+        const chartW = 280;
+        const chartH = 120;
+        const padX = 20;
+        const padY = 16;
+        const linePoints = barFlights.map((v, idx) => {
+          const x =
+            barFlights.length <= 1
+              ? chartW / 2
+              : padX + (idx * (chartW - padX * 2)) / (barFlights.length - 1);
+          const y = chartH - padY - (v.capacidadVuelo / maxCap) * (chartH - padY * 2);
+          return { x, y, code: v.numeroVuelo, cap: v.capacidadVuelo };
+        });
+        const polylineStr = linePoints.map((p) => `${p.x},${p.y}`).join(' ');
+        const areaStr =
+          linePoints.length > 0
+            ? `${linePoints[0].x},${chartH - padY} ${polylineStr} ${
+                linePoints[linePoints.length - 1].x
+              },${chartH - padY}`
+            : '';
+
+        return (
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* 1. Gráfico Circular (Donut) */}
+            <div className="p-4 bg-white border border-zinc-200 rounded-xl shadow-2xs flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                    Estado Operativo
+                  </span>
+                  <h3 className="text-sm font-bold text-[#18181B]">Distribución de Vuelos</h3>
+                </div>
+                <span className="material-symbols-outlined text-[#0284C7] text-[20px]">donut_large</span>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <svg viewBox="0 0 120 120" className="w-28 h-28 shrink-0">
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r={radius}
+                    fill="none"
+                    stroke="currentColor"
+                    className="text-zinc-200"
+                    strokeWidth="14"
+                  />
+                  {stateCounts.map((seg) => {
+                    if (seg.count === 0) return null;
+                    const segLen = (seg.count / totalForDonut) * circumference;
+                    const dashArray = `${segLen} ${circumference - segLen}`;
+                    const dashOffset = -accumulatedOffset;
+                    accumulatedOffset += segLen;
+                    return (
+                      <circle
+                        key={seg.label}
+                        cx="60"
+                        cy="60"
+                        r={radius}
+                        fill="none"
+                        stroke={seg.color}
+                        strokeWidth="14"
+                        strokeDasharray={dashArray}
+                        strokeDashoffset={dashOffset}
+                        transform="rotate(-90 60 60)"
+                      />
+                    );
+                  })}
+                  <text
+                    x="60"
+                    y="57"
+                    textAnchor="middle"
+                    className="fill-current text-[#18181B] text-lg font-bold"
+                  >
+                    {activeFlights.length}
+                  </text>
+                  <text
+                    x="60"
+                    y="71"
+                    textAnchor="middle"
+                    className="fill-current text-zinc-500 text-[9px] font-semibold uppercase"
+                  >
+                    Vuelos
+                  </text>
+                </svg>
+
+                <div className="flex-1 space-y-1.5 text-xs">
+                  {stateCounts.map((seg) => (
+                    <div key={seg.label} className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 text-zinc-600 truncate">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: seg.color }}
+                        />
+                        <span className="truncate">{seg.label}</span>
+                      </span>
+                      <span className="font-mono-code font-bold text-[#18181B]">{seg.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Gráfico de Barras Verticales */}
+            <div className="p-4 bg-white border border-zinc-200 rounded-xl shadow-2xs flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                    Tarifario por Vuelo
+                  </span>
+                  <h3 className="text-sm font-bold text-[#18181B]">Tarifa Base (USD)</h3>
+                </div>
+                <span className="material-symbols-outlined text-emerald-600 text-[20px]">bar_chart</span>
+              </div>
+
+              {barFlights.length === 0 ? (
+                <div className="h-32 flex items-center justify-center text-xs text-zinc-500">
+                  Sin vuelos registrados.
+                </div>
+              ) : (
+                <div className="h-32 flex items-end justify-around gap-2 pt-4">
+                  {barFlights.map((v) => {
+                    const heightPct = Math.max(Math.round((v.precioBase / maxFare) * 100), 12);
+                    return (
+                      <div key={v.id} className="flex-1 flex flex-col items-center h-full justify-end gap-1">
+                        <span className="font-mono-code text-[10px] font-bold text-emerald-700">
+                          ${Math.round(v.precioBase)}
+                        </span>
+                        <div className="w-full max-w-[28px] flex-1 flex items-end bg-zinc-100 rounded-t overflow-hidden">
+                          <div
+                            className="w-full bg-gradient-to-t from-[#0284C7] to-sky-400 rounded-t transition-all"
+                            style={{ height: `${heightPct}%` }}
+                            title={`${v.numeroVuelo}: $${v.precioBase.toFixed(2)} USD`}
+                          />
+                        </div>
+                        <span className="font-mono-code text-[10px] font-semibold text-zinc-600 truncate max-w-full">
+                          {v.numeroVuelo}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* 3. Gráfico de Línea / Área */}
+            <div className="p-4 bg-white border border-zinc-200 rounded-xl shadow-2xs flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                    Oferta de Cabina
+                  </span>
+                  <h3 className="text-sm font-bold text-[#18181B]">Capacidad por Vuelo (PAX)</h3>
+                </div>
+                <span className="material-symbols-outlined text-indigo-600 text-[20px]">show_chart</span>
+              </div>
+
+              {linePoints.length === 0 ? (
+                <div className="h-32 flex items-center justify-center text-xs text-zinc-500">
+                  Sin datos de capacidad.
+                </div>
+              ) : (
+                <div className="flex flex-col">
+                  <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full h-28 overflow-visible">
+                    <defs>
+                      <linearGradient id="capAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#6366F1" stopOpacity="0.35" />
+                        <stop offset="100%" stopColor="#6366F1" stopOpacity="0.02" />
+                      </linearGradient>
+                    </defs>
+                    <line x1={padX} y1={chartH - padY} x2={chartW - padX} y2={chartH - padY} stroke="#CBD5E1" strokeWidth="1" />
+                    {areaStr && <polygon points={areaStr} fill="url(#capAreaGrad)" />}
+                    {linePoints.length > 1 && (
+                      <polyline
+                        fill="none"
+                        stroke="#6366F1"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        points={polylineStr}
+                      />
+                    )}
+                    {linePoints.map((pt) => (
+                      <g key={pt.code}>
+                        <circle cx={pt.x} cy={pt.y} r="4" fill="#6366F1" stroke="#FFFFFF" strokeWidth="1.5" />
+                        <text
+                          x={pt.x}
+                          y={pt.y - 8}
+                          textAnchor="middle"
+                          className="fill-current text-indigo-600 font-mono-code text-[9px] font-bold"
+                        >
+                          {pt.cap}
+                        </text>
+                      </g>
+                    ))}
+                  </svg>
+                  <div className="flex items-center justify-between px-2 text-[10px] font-mono-code text-zinc-500">
+                    {linePoints.map((pt) => (
+                      <span key={pt.code}>{pt.code}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        );
+      })()}
+
       {/* Tabla de Actividad Reciente de Vuelos */}
       <section className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden flex flex-col">
         <div className="p-4 sm:px-6 bg-[#F4F4F5] border-b border-zinc-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

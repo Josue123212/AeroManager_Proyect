@@ -42,6 +42,7 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IExcelReportService, ExcelReportService>();
         services.AddHttpClient<IAiAssistantService, GeminiAiService>();
+        services.AddSingleton<FlightStatusSyncRunner>();
 
         return services;
     }

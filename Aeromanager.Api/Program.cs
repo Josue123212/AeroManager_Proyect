@@ -12,6 +12,7 @@ builder.Services.AddControllers();
 // Registrar las capas del proyecto
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddHostedService<Aeromanager.Api.Services.FlightStatusHostedService>();
 
 // Configurar OpenAPI
 builder.Services.AddOpenApi();

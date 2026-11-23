@@ -16,7 +16,8 @@ public record UpdateVueloCommand(
     int CapacidadVuelo,
     decimal PrecioBase,
     string Estado,
-    bool Activo
+    bool Activo,
+    bool CallerIsSuperAdmin = false
 );
 
 public class UpdateVueloCommandHandler
@@ -42,6 +43,13 @@ public class UpdateVueloCommandHandler
     {
         var entity = await _repository.GetByIdAsync(command.Id);
         if (entity == null) return null;
+
+        var currentEstadoUp = (entity.Estado ?? string.Empty).Trim().ToUpperInvariant();
+        if (!command.CallerIsSuperAdmin &&
+            (currentEstadoUp.Contains("ATERRIZ") || currentEstadoUp.Contains("CANCEL")))
+        {
+            throw new InvalidOperationException($"Registro Histórico Cerrado: Un vuelo en estado {entity.Estado} no puede modificarse desde Operador. Solo SuperAdmin puede realizar ajustes excepcionales.");
+        }
 
         var gate = await _puertaRepository.GetByIdAsync(command.PuertaEmbarqueId);
         if (gate is null || !gate.Activo)

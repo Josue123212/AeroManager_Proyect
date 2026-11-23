@@ -56,7 +56,8 @@ public class VuelosController(
     public async Task<ActionResult<VueloDto>> Update(
         int id, UpdateVueloCommand command)
     {
-        var item = await updateHandler.Handle(command with { Id = id });
+        var callerIsSuperAdmin = User.IsInRole("SuperAdmin");
+        var item = await updateHandler.Handle(command with { Id = id, CallerIsSuperAdmin = callerIsSuperAdmin });
         if (item is null)
         {
             return NotFound();

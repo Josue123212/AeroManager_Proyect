@@ -46,7 +46,7 @@ const ADMIN_SECTIONS: NavSection[] = [
   {
     title: 'Operaciones',
     items: [
-      { label: 'Reportes Excel (.xls)', icon: 'table_chart', path: '/admin/reportes-excel' }
+      { label: 'Reportes Excel (.xlsx)', icon: 'table_chart', path: '/admin/reportes-excel' }
     ]
   }
 ];

@@ -28,7 +28,7 @@ const CONSOLE_GROUPS = [
       { label: 'Asientos', path: '/superadmin/ver/admin/asientos' },
       { label: 'Usuarios Operativos', path: '/superadmin/ver/admin/usuarios' },
       { label: 'Roles Operativos', path: '/superadmin/ver/admin/roles-permisos' },
-      { label: 'Reportes Excel (.xls)', path: '/superadmin/ver/admin/reportes-excel' }
+      { label: 'Reportes Excel (.xlsx)', path: '/superadmin/ver/admin/reportes-excel' }
     ]
   },
   {

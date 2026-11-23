@@ -82,7 +82,7 @@ export default function ReportesExcelPage() {
           Operaciones &amp; Inteligencia Comercial / Exportación
         </span>
         <h1 className="text-2xl font-bold text-[#18181B]">
-          Centro de Descarga de Reportes Excel (.xls)
+          Centro de Descarga de Reportes Excel (.xlsx)
         </h1>
         <p className="text-xs text-zinc-500 mt-0.5">
           Generación directa de hojas de cálculo en formato compatible con Microsoft Excel.
@@ -127,7 +127,7 @@ export default function ReportesExcelPage() {
           >
             <span className="material-symbols-outlined text-[18px]">download</span>
             <span>
-              {downloading === 'vuelos-excel' ? 'Consultando BD...' : 'Descargar Reporte Vuelos (.xls)'}
+              {downloading === 'vuelos-excel' ? 'Consultando BD...' : 'Descargar Reporte Vuelos (.xlsx)'}
             </span>
           </button>
         </div>
@@ -164,7 +164,7 @@ export default function ReportesExcelPage() {
             <span>
               {downloading === 'reservas-excel'
                 ? 'Consultando BD...'
-                : 'Descargar Reporte Reservas (.xls)'}
+                : 'Descargar Reporte Reservas (.xlsx)'}
             </span>
           </button>
         </div>
@@ -201,7 +201,7 @@ export default function ReportesExcelPage() {
             <span>
               {downloading === 'pasajeros-excel'
                 ? 'Consultando BD...'
-                : 'Descargar Padrón Pasajeros (.xls)'}
+                : 'Descargar Padrón Pasajeros (.xlsx)'}
             </span>
           </button>
         </div>
@@ -215,7 +215,7 @@ export default function ReportesExcelPage() {
               Historial de Descargas Efectuadas en esta Terminal
             </h2>
             <span className="text-[11px] text-zinc-500">
-              Se registra automáticamente cada vez que se descarga un archivo .xls desde la API
+              Se registra automáticamente cada vez que se descarga un archivo .xlsx desde la API
             </span>
           </div>
           <span className="font-mono-code text-xs text-zinc-600">

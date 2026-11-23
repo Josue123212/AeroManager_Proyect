@@ -495,7 +495,7 @@ export default function DashboardEjecutivoPage() {
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-emerald-700 bg-white hover:bg-emerald-50 border border-emerald-300 text-xs font-semibold transition-colors shadow-2xs"
             >
               <span className="material-symbols-outlined text-[17px]">table_chart</span>
-              <span>Ir a Reportes Excel (.xls)</span>
+              <span>Ir a Reportes Excel (.xlsx)</span>
             </Link>
             <button
               type="button"

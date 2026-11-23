@@ -158,7 +158,7 @@ export default function HistorialTicketsCounterPage() {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al exportar reporte de reservas (.xls).'));
+      setErrorMsg(extractApiError(err, 'Error al exportar reporte de reservas (.xlsx).'));
     }
   };
 
@@ -270,7 +270,7 @@ export default function HistorialTicketsCounterPage() {
             className="h-10 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">table_chart</span>
-            <span>Exportar Reporte (.xls)</span>
+            <span>Exportar Reporte (.xlsx)</span>
           </button>
         </div>
       </div>

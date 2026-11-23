@@ -200,7 +200,7 @@ export default function ProgramacionVuelosPage() {
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al exportar reporte de vuelos (.xls).'));
+      setErrorMsg(extractApiError(err, 'Error al exportar reporte de vuelos (.xlsx).'));
     }
   };
 
@@ -267,7 +267,7 @@ export default function ProgramacionVuelosPage() {
             className="h-9 px-3.5 rounded bg-white hover:bg-emerald-50 border border-emerald-300 text-emerald-700 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">table_chart</span>
-            <span>Exportar (.xls)</span>
+            <span>Exportar (.xlsx)</span>
           </button>
           <button
             type="button"

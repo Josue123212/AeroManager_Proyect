@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import axiosClient, { extractApiError } from '../../api/axiosClient';
 import {
   AeropuertoDto,
@@ -416,9 +417,18 @@ export default function HistorialTicketsCounterPage() {
           const seatCode = info.asFis
             ? `${info.asFis.fila}${info.asFis.letra}`
             : 'ASIGNADO';
+          const boardingTimeStr = info.vuelo
+            ? new Date(
+                new Date(info.vuelo.fechaHoraSalida).getTime() - 45 * 60 * 1000
+              ).toLocaleTimeString('es-PE', { timeStyle: 'short' })
+            : '—';
+          const bcbpPayload = `AEROMANAGER|TKT:${selectedBoardingReserva.codigoTicket}|PAX:${info.pasajeroNombre}|DOC:${info.pasajeroDoc}|FLT:${info.vuelo ? info.vuelo.numeroVuelo : 'AM'}|RTE:${info.orig ? info.orig.codigoIata : 'LIM'}-${info.dest ? info.dest.codigoIata : 'CUZ'}|GATE:${info.gate ? info.gate.codigoGate : 'A01'}|SEAT:${seatCode}`;
           return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/50 backdrop-blur-xs p-4">
-              <div className="w-full max-w-2xl bg-white border border-zinc-200 rounded-2xl shadow-2xl overflow-hidden">
+              <div
+                id="boarding-pass-print-area"
+                className="w-full max-w-2xl bg-white border border-zinc-200 rounded-2xl shadow-2xl overflow-hidden"
+              >
                 <div className="px-6 py-4 bg-[#0284C7] text-white flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <span className="material-symbols-outlined text-2xl">
@@ -508,12 +518,22 @@ export default function HistorialTicketsCounterPage() {
                       </div>
                     </div>
 
-                    {/* Código de Barras Visual */}
-                    <div className="pt-3 border-t border-zinc-200 flex items-center justify-between">
-                      <div className="font-mono-code text-xs tracking-[0.25em] text-zinc-400 select-none">
-                        ||| |||| || ||||| ||| |||| ||||| ||| ||||
+                    {/* Código QR Operativo (Estándar Boarding Pass) */}
+                    <div className="pt-3 border-t border-zinc-200 flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-1.5 bg-white border border-zinc-200 rounded-lg shrink-0">
+                          <QRCodeSVG value={bcbpPayload} size={68} level="M" />
+                        </div>
+                        <div className="text-[11px] text-zinc-500 space-y-0.5">
+                          <span className="font-bold text-zinc-700 block">
+                            Inicio de Abordaje: {boardingTimeStr}
+                          </span>
+                          <span className="block">
+                            Presentarse en puerta 45 min antes de la salida.
+                          </span>
+                        </div>
                       </div>
-                      <span className="font-mono-code text-xs font-bold text-zinc-600">
+                      <span className="font-mono-code text-xs font-bold text-zinc-600 shrink-0">
                         {selectedBoardingReserva.codigoTicket}
                       </span>
                     </div>
@@ -553,14 +573,14 @@ export default function HistorialTicketsCounterPage() {
                       </div>
                     </div>
 
-                    <div className="pt-4 space-y-2">
+                    <div className="pt-4 space-y-2 no-print">
                       <button
                         type="button"
                         onClick={() => window.print()}
                         className="w-full h-9 rounded bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
                       >
                         <span className="material-symbols-outlined text-[16px]">print</span>
-                        <span>Imprimir Pase</span>
+                        <span>Imprimir / Guardar PDF</span>
                       </button>
                       <button
                         type="button"

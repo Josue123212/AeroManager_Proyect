@@ -11,7 +11,8 @@ public record UpdateUsuarioCommand(
     string NombreCompleto,
     string Email,
     string EstadoAcceso,
-    bool Activo
+    bool Activo,
+    string? PasswordHash = null
 );
 
 public class UpdateUsuarioCommandHandler
@@ -76,6 +77,10 @@ public class UpdateUsuarioCommandHandler
         entity.Email = command.Email;
         entity.EstadoAcceso = command.EstadoAcceso;
         entity.Activo = command.Activo;
+        if (!string.IsNullOrWhiteSpace(command.PasswordHash))
+        {
+            entity.PasswordHash = command.PasswordHash;
+        }
 
         _repository.Update(entity);
         await _unitOfWork.SaveChangesAsync();

@@ -1,11 +1,11 @@
 
 using Aeromanager.Application.DTOs;
+using Aeromanager.Application.Interfaces;
 using Aeromanager.Application.UseCases.Usuarios.Commands;
 using Aeromanager.Application.UseCases.Usuarios.Queries;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 
@@ -18,6 +18,7 @@ public class UsuariosController(
     GetUsuariosQueryHandler queryHandler,
     CreateUsuarioCommandHandler createHandler,
     UpdateUsuarioCommandHandler updateHandler,
+    IPasswordHasher passwordHasher,
     IValidator<CreateUsuarioCommand> createValidator) : ControllerBase
 {
     [HttpGet]
@@ -43,7 +44,7 @@ public class UsuariosController(
     public async Task<ActionResult<UsuarioDto>> Create(
         CreateUsuarioRequest request)
     {
-        var hash = new PasswordHasher<CreateUsuarioRequest>().HashPassword(request, request.Password);
+        var hash = passwordHasher.HashPassword(request.Password);
         var command = new CreateUsuarioCommand(request.NombreCompleto, request.Email, hash, request.EstadoAcceso);
         var validation = await createValidator.ValidateAsync(command);
         if (!validation.IsValid)
@@ -62,16 +63,34 @@ public class UsuariosController(
 
     [HttpPut("{id:int}")]
     public async Task<ActionResult<UsuarioDto>> Update(
-        int id, UpdateUsuarioCommand command)
+        int id, UpdateUsuarioRequest request)
     {
         var currentUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (int.TryParse(currentUserIdClaim, out var currentUserId) && currentUserId == id && !command.Activo)
+        if (int.TryParse(currentUserIdClaim, out var currentUserId) && currentUserId == id && !request.Activo)
         {
             return BadRequest(new { message = "No puedes desactivar tu propia cuenta en sesión." });
         }
 
+        string? newHash = null;
+        if (!string.IsNullOrWhiteSpace(request.Password))
+        {
+            var cleanPwd = request.Password.Trim();
+            if (cleanPwd.Length < 6)
+            {
+                return BadRequest(new { message = "La nueva contraseña debe tener al menos 6 caracteres." });
+            }
+            newHash = passwordHasher.HashPassword(cleanPwd);
+        }
+
         var callerIsSuperAdmin = User.IsInRole("SuperAdmin");
-        var item = await updateHandler.Handle(command with { Id = id }, callerIsSuperAdmin);
+        var command = new UpdateUsuarioCommand(
+            id,
+            request.NombreCompleto,
+            request.Email,
+            request.EstadoAcceso,
+            request.Activo,
+            newHash);
+        var item = await updateHandler.Handle(command, callerIsSuperAdmin);
         if (item is null)
         {
             return NotFound();
@@ -85,4 +104,12 @@ public class UsuariosController(
         [Required] string Email,
         [Required] string Password,
         [Required] string EstadoAcceso = "ACTIVO");
+
+    public record UpdateUsuarioRequest(
+        int Id,
+        [Required] string NombreCompleto,
+        [Required] string Email,
+        [Required] string EstadoAcceso,
+        bool Activo,
+        string? Password = null);
 }

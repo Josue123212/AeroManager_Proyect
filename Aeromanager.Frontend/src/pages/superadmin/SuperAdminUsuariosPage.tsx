@@ -100,7 +100,8 @@ export default function SuperAdminUsuariosPage() {
           nombreCompleto,
           email,
           estadoAcceso,
-          activo: derivedActivo
+          activo: derivedActivo,
+          ...(password.trim() ? { password: password.trim() } : {})
         });
       } else {
         await axiosClient.post('/usuarios', {
@@ -300,21 +301,20 @@ export default function SuperAdminUsuariosPage() {
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs outline-none focus:border-indigo-600"
                 />
               </div>
-              {!editing && (
-                <div>
-                  <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
-                    Contraseña Inicial
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    minLength={6}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full h-9 px-3 rounded border border-zinc-300 text-xs outline-none focus:border-indigo-600"
-                  />
-                </div>
-              )}
+              <div>
+                <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
+                  {editing ? 'Nueva Contraseña (opcional)' : 'Contraseña Inicial'}
+                </label>
+                <input
+                  type="password"
+                  required={!editing}
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={editing ? 'Dejar vacío para mantener la actual' : ''}
+                  className="w-full h-9 px-3 rounded border border-zinc-300 text-xs outline-none focus:border-indigo-600"
+                />
+              </div>
               <div>
                 <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
                   Estado de Acceso

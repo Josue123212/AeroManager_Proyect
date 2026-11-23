@@ -171,11 +171,13 @@ export default function ProgramacionVuelosPage() {
     setErrorMsg(null);
     try {
       const res = await axiosClient.get('/reportes/vuelos-excel', { responseType: 'blob' });
-      const blob = new Blob([res.data], { type: 'application/vnd.ms-excel' });
+      const blob = new Blob([res.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Reporte_Vuelos_${new Date().toISOString().slice(0, 10)}.xls`;
+      a.download = `Reporte_Vuelos_${new Date().toISOString().slice(0, 10)}.xlsx`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -277,11 +279,10 @@ export default function ProgramacionVuelosPage() {
                   key={tab}
                   type="button"
                   onClick={() => setEstadoTab(tab)}
-                  className={`px-3 py-1.5 rounded text-xs font-semibold cursor-pointer transition-colors ${
-                    estadoTab === tab
+                  className={`px-3 py-1.5 rounded text-xs font-semibold cursor-pointer transition-colors ${estadoTab === tab
                       ? 'bg-[#0284C7] text-white'
                       : 'bg-white border border-zinc-300 text-zinc-700 hover:bg-zinc-100'
-                  }`}
+                    }`}
                 >
                   {tab === 'ALL' ? `Todos (${vuelos.length})` : tab}
                 </button>

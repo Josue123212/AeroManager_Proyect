@@ -86,6 +86,23 @@ export default function AeropuertosPage() {
     }
   };
 
+  const handleToggleActivo = async (item: AeropuertoDto) => {
+    setErrorMsg(null);
+    try {
+      await axiosClient.put(`/aeropuertos/${item.id}`, {
+        id: item.id,
+        nombre: item.nombre,
+        codigoIata: item.codigoIata,
+        ciudadId: item.ciudadId,
+        direccion: item.direccion || '',
+        activo: !item.activo
+      });
+      await loadData();
+    } catch (err: any) {
+      setErrorMsg(extractApiError(err, 'Error al actualizar estado del aeropuerto.'));
+    }
+  };
+
   const getCiudadNombre = (id: number) =>
     ciudades.find((c) => c.id === id)?.nombre || `Ciudad #${id}`;
 
@@ -171,17 +188,30 @@ export default function AeropuertosPage() {
                   <td className="py-3 px-4 text-zinc-700">{getCiudadNombre(item.ciudadId)}</td>
                   <td className="py-3 px-4 text-zinc-500">{item.direccion || '—'}</td>
                   <td className="py-3 px-4">
-                    <span className="inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold bg-emerald-50 border-emerald-200 text-emerald-700">
+                    <span
+                      className={`inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold ${
+                        item.activo
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                          : 'bg-red-50 border-red-200 text-red-700'
+                      }`}
+                    >
                       {item.activo ? 'Operativo' : 'Inactivo'}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-right">
+                  <td className="py-3 px-4 text-right space-x-2">
                     <button
                       type="button"
                       onClick={() => openEdit(item)}
                       className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
                     >
                       Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleActivo(item)}
+                      className="px-2.5 py-1 rounded bg-red-50 hover:bg-red-100 text-red-700 font-medium cursor-pointer"
+                    >
+                      {item.activo ? 'Desactivar' : 'Reactivar'}
                     </button>
                   </td>
                 </tr>

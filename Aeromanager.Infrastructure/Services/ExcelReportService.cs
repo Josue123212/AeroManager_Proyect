@@ -4,10 +4,12 @@ using System.Security;
 using System.Text;
 using Aeromanager.Application.Interfaces;
 using Aeromanager.Domain.Entities;
+using Aeromanager.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace Aeromanager.Infrastructure.Services;
 
-public class ExcelReportService : IExcelReportService
+public class ExcelReportService(AeroManagerDbContext db) : IExcelReportService
 {
     private sealed record ColumnSpec(string Header, double CharWidth);
     private sealed record CellSpec(string Value, int StyleIndex, bool IsNumber = false);
@@ -29,13 +31,19 @@ public class ExcelReportService : IExcelReportService
     public byte[] GenerarReporteVuelosExcel(IEnumerable<Vuelo> vuelos)
     {
         var list = vuelos.ToList();
+        var aeropuertos = db.Aeropuerto.AsNoTracking().ToDictionary(a => a.Id);
+        var rutas = db.Ruta.AsNoTracking().ToDictionary(r => r.Id);
+        var modelos = db.ModeloAvion.AsNoTracking().ToDictionary(m => m.Id);
+        var aviones = db.Avion.AsNoTracking().ToDictionary(a => a.Id);
+        var puertas = db.PuertaEmbarque.AsNoTracking().ToDictionary(p => p.Id);
+
         var columns = new[]
         {
             new ColumnSpec("ID", 8),
             new ColumnSpec("N° Vuelo", 14),
-            new ColumnSpec("Ruta ID", 11),
-            new ColumnSpec("Avión ID", 11),
-            new ColumnSpec("Gate ID", 11),
+            new ColumnSpec("Ruta / Trayecto", 26),
+            new ColumnSpec("Aeronave", 28),
+            new ColumnSpec("Puerta (Gate)", 15),
             new ColumnSpec("Fecha Salida", 20),
             new ColumnSpec("Fecha Llegada", 20),
             new ColumnSpec("Capacidad (PAX)", 18),
@@ -46,15 +54,37 @@ public class ExcelReportService : IExcelReportService
 
         var rows = list.Select((v, idx) =>
         {
+            var baseStyle = idx % 2 == 0 ? StyleCellEven : StyleCellOdd;
             var centerStyle = idx % 2 == 0 ? StyleCellEvenCenter : StyleCellOddCenter;
             var currencyStyle = idx % 2 == 0 ? StyleCurrencyEven : StyleCurrencyOdd;
+
+            var rutaLabel = $"Ruta #{v.RutaId}";
+            if (rutas.TryGetValue(v.RutaId, out var ruta))
+            {
+                var orig = aeropuertos.TryGetValue(ruta.AeropuertoOrigenId, out var ao) ? ao.CodigoIata : ruta.AeropuertoOrigenId.ToString(CultureInfo.InvariantCulture);
+                var dest = aeropuertos.TryGetValue(ruta.AeropuertoDestinoId, out var ad) ? ad.CodigoIata : ruta.AeropuertoDestinoId.ToString(CultureInfo.InvariantCulture);
+                rutaLabel = $"{orig} → {dest} ({ruta.CodigoRuta})";
+            }
+
+            var avionLabel = $"Avión #{v.AvionId}";
+            if (aviones.TryGetValue(v.AvionId, out var avion))
+            {
+                avionLabel = modelos.TryGetValue(avion.ModeloAvionId, out var modelo)
+                    ? $"{avion.Matricula} · {modelo.NombreModelo}"
+                    : avion.Matricula;
+            }
+
+            var gateLabel = puertas.TryGetValue(v.PuertaEmbarqueId, out var puerta)
+                ? $"GATE {puerta.CodigoGate}"
+                : $"Gate #{v.PuertaEmbarqueId}";
+
             return new[]
             {
                 new CellSpec(v.Id.ToString(CultureInfo.InvariantCulture), centerStyle, true),
                 new CellSpec(v.NumeroVuelo ?? string.Empty, centerStyle),
-                new CellSpec(v.RutaId.ToString(CultureInfo.InvariantCulture), centerStyle, true),
-                new CellSpec(v.AvionId.ToString(CultureInfo.InvariantCulture), centerStyle, true),
-                new CellSpec(v.PuertaEmbarqueId.ToString(CultureInfo.InvariantCulture), centerStyle, true),
+                new CellSpec(rutaLabel, baseStyle),
+                new CellSpec(avionLabel, baseStyle),
+                new CellSpec(gateLabel, centerStyle),
                 new CellSpec(v.FechaHoraSalida.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture), centerStyle),
                 new CellSpec(v.FechaHoraLlegada.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture), centerStyle),
                 new CellSpec(v.CapacidadVuelo.ToString(CultureInfo.InvariantCulture), centerStyle, true),
@@ -75,28 +105,87 @@ public class ExcelReportService : IExcelReportService
     public byte[] GenerarReporteReservasExcel(IEnumerable<Reserva> reservas)
     {
         var list = reservas.ToList();
+        var vuelos = db.Vuelo.AsNoTracking().ToDictionary(v => v.Id);
+        var rutas = db.Ruta.AsNoTracking().ToDictionary(r => r.Id);
+        var aeropuertos = db.Aeropuerto.AsNoTracking().ToDictionary(a => a.Id);
+        var detallesPorReserva = db.DetalleReserva.AsNoTracking()
+            .GroupBy(d => d.ReservaId)
+            .ToDictionary(g => g.Key, g => g.First());
+        var pasajeros = db.Pasajero.AsNoTracking().ToDictionary(p => p.Id);
+        var tiposDoc = db.TipoDocumento.AsNoTracking().ToDictionary(t => t.Id);
+        var asientosVuelo = db.AsientoVuelo.AsNoTracking().ToDictionary(av => av.Id);
+        var asientos = db.Asiento.AsNoTracking().ToDictionary(a => a.Id);
+        var usuarios = db.Usuario.AsNoTracking().ToDictionary(u => u.Id);
+
         var columns = new[]
         {
             new ColumnSpec("ID", 8),
-            new ColumnSpec("Código Ticket", 20),
-            new ColumnSpec("Vuelo ID", 12),
-            new ColumnSpec("Usuario ID", 13),
+            new ColumnSpec("Código Ticket", 18),
+            new ColumnSpec("Pasajero Titular", 26),
+            new ColumnSpec("Documento", 18),
+            new ColumnSpec("Vuelo & Ruta", 22),
+            new ColumnSpec("Asiento", 11),
+            new ColumnSpec("Agente Counter", 26),
             new ColumnSpec("Fecha Reserva", 20),
-            new ColumnSpec("Monto Total (USD)", 20),
-            new ColumnSpec("Estado Reserva", 18),
+            new ColumnSpec("Monto Total (USD)", 19),
+            new ColumnSpec("Estado Reserva", 16),
             new ColumnSpec("Activo", 10)
         };
 
         var rows = list.Select((r, idx) =>
         {
+            var baseStyle = idx % 2 == 0 ? StyleCellEven : StyleCellOdd;
             var centerStyle = idx % 2 == 0 ? StyleCellEvenCenter : StyleCellOddCenter;
             var currencyStyle = idx % 2 == 0 ? StyleCurrencyEven : StyleCurrencyOdd;
+
+            var pasajeroNombre = "Sin pasajero";
+            var pasajeroDoc = "—";
+            var asientoLabel = "—";
+
+            if (detallesPorReserva.TryGetValue(r.Id, out var det))
+            {
+                if (pasajeros.TryGetValue(det.PasajeroId, out var pas))
+                {
+                    pasajeroNombre = $"{pas.Nombres} {pas.Apellidos}".Trim();
+                    var tdCode = tiposDoc.TryGetValue(pas.TipoDocumentoId, out var td) ? td.Codigo : "DOC";
+                    pasajeroDoc = $"{tdCode} {pas.NumeroDocumento}";
+                }
+
+                if (asientosVuelo.TryGetValue(det.AsientoVueloId, out var av) &&
+                    asientos.TryGetValue(av.AsientoId, out var asFis))
+                {
+                    asientoLabel = $"{asFis.Fila}{asFis.Letra}";
+                }
+            }
+
+            var vueloLabel = $"Vuelo #{r.VueloId}";
+            if (vuelos.TryGetValue(r.VueloId, out var vuelo))
+            {
+                if (rutas.TryGetValue(vuelo.RutaId, out var ruta))
+                {
+                    var orig = aeropuertos.TryGetValue(ruta.AeropuertoOrigenId, out var ao) ? ao.CodigoIata : "ORI";
+                    var dest = aeropuertos.TryGetValue(ruta.AeropuertoDestinoId, out var ad) ? ad.CodigoIata : "DES";
+                    vueloLabel = $"{vuelo.NumeroVuelo} ({orig} → {dest})";
+                }
+                else
+                {
+                    vueloLabel = vuelo.NumeroVuelo;
+                }
+            }
+
+            var agenteLabel = usuarios.TryGetValue(r.UsuarioRegistroId, out var usr)
+                ? usr.NombreCompleto
+                : $"Usuario #{r.UsuarioRegistroId}";
+
             return new[]
             {
                 new CellSpec(r.Id.ToString(CultureInfo.InvariantCulture), centerStyle, true),
                 new CellSpec(r.CodigoTicket ?? string.Empty, centerStyle),
-                new CellSpec(r.VueloId.ToString(CultureInfo.InvariantCulture), centerStyle, true),
-                new CellSpec(r.UsuarioRegistroId.ToString(CultureInfo.InvariantCulture), centerStyle, true),
+                new CellSpec(pasajeroNombre, baseStyle),
+                new CellSpec(pasajeroDoc, centerStyle),
+                new CellSpec(vueloLabel, centerStyle),
+                new CellSpec(asientoLabel, centerStyle),
+                new CellSpec(agenteLabel, baseStyle),
                 new CellSpec(r.FechaReserva.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture), centerStyle),
                 new CellSpec(r.MontoTotal.ToString("0.00", CultureInfo.InvariantCulture), currencyStyle, true),
                 new CellSpec(r.EstadoReserva ?? string.Empty, ResolveStatusStyle(r.EstadoReserva ?? string.Empty)),
@@ -115,16 +204,19 @@ public class ExcelReportService : IExcelReportService
     public byte[] GenerarReportePasajerosExcel(IEnumerable<Pasajero> pasajeros)
     {
         var list = pasajeros.ToList();
+        var tiposDoc = db.TipoDocumento.AsNoTracking().ToDictionary(t => t.Id);
+        var paises = db.Pais.AsNoTracking().ToDictionary(p => p.Id);
+
         var columns = new[]
         {
             new ColumnSpec("ID", 8),
             new ColumnSpec("Nombres", 24),
             new ColumnSpec("Apellidos", 24),
-            new ColumnSpec("Tipo Doc ID", 13),
+            new ColumnSpec("Tipo Documento", 16),
             new ColumnSpec("N° Documento", 18),
             new ColumnSpec("Correo Electrónico", 32),
             new ColumnSpec("Teléfono", 18),
-            new ColumnSpec("País ID", 11),
+            new ColumnSpec("Nacionalidad", 18),
             new ColumnSpec("Activo", 10)
         };
 
@@ -132,16 +224,23 @@ public class ExcelReportService : IExcelReportService
         {
             var baseStyle = idx % 2 == 0 ? StyleCellEven : StyleCellOdd;
             var centerStyle = idx % 2 == 0 ? StyleCellEvenCenter : StyleCellOddCenter;
+            var tipoDocLabel = tiposDoc.TryGetValue(p.TipoDocumentoId, out var td)
+                ? td.Codigo
+                : $"Doc #{p.TipoDocumentoId}";
+            var paisLabel = paises.TryGetValue(p.NacionalidadPaisId, out var pais)
+                ? pais.Nombre
+                : $"País #{p.NacionalidadPaisId}";
+
             return new[]
             {
                 new CellSpec(p.Id.ToString(CultureInfo.InvariantCulture), centerStyle, true),
                 new CellSpec(p.Nombres ?? string.Empty, baseStyle),
                 new CellSpec(p.Apellidos ?? string.Empty, baseStyle),
-                new CellSpec(p.TipoDocumentoId.ToString(CultureInfo.InvariantCulture), centerStyle, true),
+                new CellSpec(tipoDocLabel, centerStyle),
                 new CellSpec(p.NumeroDocumento ?? string.Empty, centerStyle),
                 new CellSpec(p.Email ?? string.Empty, baseStyle),
                 new CellSpec(p.Telefono ?? string.Empty, centerStyle),
-                new CellSpec(p.NacionalidadPaisId.ToString(CultureInfo.InvariantCulture), centerStyle, true),
+                new CellSpec(paisLabel, centerStyle),
                 new CellSpec(p.Activo ? "Sí" : "No", p.Activo ? StyleBadgeOk : StyleBadgeDanger)
             };
         });

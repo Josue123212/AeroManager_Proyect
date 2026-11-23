@@ -305,7 +305,7 @@ export default function SuperAdminHeader({ children }: SuperAdminHeaderProps) {
           ))}
         </nav>
 
-        <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6">{children}</main>
+        <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6 pb-24">{children}</main>
       </div>
     </div>
   );

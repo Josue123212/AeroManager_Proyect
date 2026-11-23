@@ -207,7 +207,7 @@ export default function AdminHeader({ children }: AdminHeaderProps) {
           </div>
         </header>
 
-        <main className="pt-20 px-6 pb-8 min-h-screen">{children}</main>
+        <main className="pt-20 px-6 pb-24 min-h-screen">{children}</main>
       </div>
     </div>
   );

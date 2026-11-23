@@ -6,15 +6,16 @@ import { LoginResponseDto, RolActivoType } from '../../types/models';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const activeSessionPath = getSessionHomePath();
-  if (activeSessionPath !== '/login') {
-    return <Navigate to={activeSessionPath} replace />;
-  }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const activeSessionPath = getSessionHomePath();
+  if (activeSessionPath !== '/login') {
+    return <Navigate to={activeSessionPath} replace />;
+  }
 
   const resolvePrimaryRole = (roles: string[]): RolActivoType => {
     const normalized = roles.map((r) => r.trim().toLowerCase());

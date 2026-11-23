@@ -56,6 +56,10 @@ export default function MonitorFidsPage() {
 
   useEffect(() => {
     loadData();
+    const timer = setInterval(() => {
+      loadData();
+    }, 30000);
+    return () => clearInterval(timer);
   }, []);
 
   const vuelosActivos = vuelos.filter((v) => v.activo);
@@ -228,7 +232,15 @@ export default function MonitorFidsPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-1.5">
-            {['ALL', 'Programado', 'En Abordaje', 'En Vuelo', 'Retrasado'].map((st) => (
+            {[
+              'ALL',
+              'Programado',
+              'En Abordaje',
+              'En Vuelo',
+              'Retrasado',
+              'Aterrizado',
+              'Cancelado'
+            ].map((st) => (
               <button
                 key={st}
                 type="button"

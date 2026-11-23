@@ -519,11 +519,14 @@ export default function ProgramacionVuelosPage() {
                     onChange={(e) => setPuertaEmbarqueId(Number(e.target.value))}
                     className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                   >
-                    {puertas.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        GATE {p.codigoGate} ({p.estado})
-                      </option>
-                    ))}
+                    {puertas.map((p) => {
+                      const inMaint = p.estado.toUpperCase().includes('MANTEN');
+                      return (
+                        <option key={p.id} value={p.id} disabled={inMaint}>
+                          GATE {p.codigoGate} ({inMaint ? 'Mantenimiento — No disponible' : p.estado})
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
               </div>

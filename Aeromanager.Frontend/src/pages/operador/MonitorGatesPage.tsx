@@ -42,6 +42,10 @@ export default function MonitorGatesPage() {
 
   useEffect(() => {
     loadData();
+    const timer = setInterval(() => {
+      loadData();
+    }, 30000);
+    return () => clearInterval(timer);
   }, []);
 
   const handleChangeEstadoGate = async (item: PuertaEmbarqueDto, nuevoEstado: string) => {
@@ -172,28 +176,30 @@ export default function MonitorGatesPage() {
             <button
               type="button"
               onClick={() => setTerminalTab('ALL')}
-              className={`px-3 py-1.5 rounded text-xs font-semibold cursor-pointer ${
-                terminalTab === 'ALL'
+              className={`px-3 py-1.5 rounded text-xs font-semibold cursor-pointer ${terminalTab === 'ALL'
                   ? 'bg-[#0284C7] text-white'
                   : 'bg-[#F4F4F5] text-zinc-700 hover:bg-zinc-200'
-              }`}
+                }`}
             >
               Todas las Terminales
             </button>
-            {terminalesFiltradas.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setTerminalTab(String(t.id))}
-                className={`px-3 py-1.5 rounded text-xs font-semibold cursor-pointer ${
-                  terminalTab === String(t.id)
-                    ? 'bg-[#0284C7] text-white'
-                    : 'bg-[#F4F4F5] text-zinc-700 hover:bg-zinc-200'
-                }`}
-              >
-                {t.codigo}
-              </button>
-            ))}
+            {terminalesFiltradas.map((t) => {
+              const aero = aeropuertos.find((a) => a.id === t.aeropuertoId);
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTerminalTab(String(t.id))}
+                  className={`px-3 py-1.5 rounded text-xs font-semibold cursor-pointer ${terminalTab === String(t.id)
+                      ? 'bg-[#0284C7] text-white'
+                      : 'bg-[#F4F4F5] text-zinc-700 hover:bg-zinc-200'
+                    }`}
+                >
+                  {t.codigo}
+                  {aero ? ` · ${aero.codigoIata}` : ''}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -218,9 +224,18 @@ export default function MonitorGatesPage() {
           {puertasActivas.map((gate) => {
             const term = terminales.find((t) => t.id === gate.terminalId);
             const aero = term ? aeropuertos.find((a) => a.id === term.aeropuertoId) : null;
-            const vueloAsignado = vuelos.find(
-              (v) => v.puertaEmbarqueId === gate.id && v.activo
-            );
+            const vueloAsignado = vuelos
+              .filter((v) => {
+                if (v.puertaEmbarqueId !== gate.id || !v.activo) return false;
+                const up = v.estado.toUpperCase();
+                return !up.includes('ATERRIZ') && !up.includes('CANCEL');
+              })
+              .sort(
+                (a, b) =>
+                  new Date(a.fechaHoraSalida).getTime() - new Date(b.fechaHoraSalida).getTime()
+              )[0];
+            const gateEnMantenimientoConVuelo =
+              gate.estado.toUpperCase().includes('MANTEN') && Boolean(vueloAsignado);
 
             return (
               <div
@@ -249,10 +264,15 @@ export default function MonitorGatesPage() {
                     {vueloAsignado ? (
                       <div className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <span className="text-zinc-500">Vuelo Asignado:</span>
-                          <span className="font-mono-code font-bold text-[#0284C7]">
-                            {vueloAsignado.numeroVuelo}
-                          </span>
+                          <span className="text-zinc-500">Vuelo Activo:</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono-code font-bold text-[#0284C7]">
+                              {vueloAsignado.numeroVuelo}
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded bg-white border border-zinc-200 text-[10px] font-semibold text-zinc-700">
+                              {vueloAsignado.estado}
+                            </span>
+                          </div>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="text-zinc-500">Salida (STD):</span>
@@ -263,10 +283,15 @@ export default function MonitorGatesPage() {
                             })}
                           </span>
                         </div>
+                        {gateEnMantenimientoConVuelo && (
+                          <div className="mt-1.5 px-2 py-1 rounded bg-red-50 border border-red-200 text-red-700 text-[11px] font-semibold">
+                            Conflicto: Gate en mantenimiento con vuelo asignado.
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <span className="text-zinc-500 font-mono-code">
-                        Sin vuelo asignado actualmente
+                        Sin vuelo activo asignado
                       </span>
                     )}
                   </div>
@@ -279,11 +304,10 @@ export default function MonitorGatesPage() {
                       key={st}
                       type="button"
                       onClick={() => handleChangeEstadoGate(gate, st)}
-                      className={`flex-1 py-1.5 rounded text-[11px] font-semibold cursor-pointer transition-colors ${
-                        gate.estado === st
+                      className={`flex-1 py-1.5 rounded text-[11px] font-semibold cursor-pointer transition-colors ${gate.estado === st
                           ? 'bg-[#0284C7] text-white'
                           : 'bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700'
-                      }`}
+                        }`}
                     >
                       {st}
                     </button>

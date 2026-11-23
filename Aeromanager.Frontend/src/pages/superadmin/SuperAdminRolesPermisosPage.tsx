@@ -10,6 +10,7 @@ export default function SuperAdminRolesPermisosPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [changingUserMode, setChangingUserMode] = useState(false);
   const [usuarioId, setUsuarioId] = useState<number>(0);
   const [rolId, setRolId] = useState<number>(0);
 
@@ -49,18 +50,54 @@ export default function SuperAdminRolesPermisosPage() {
       .map((a) => a.usuarioId)
   );
   const assignableUsers = usuarios.filter((u) => !superAdminUserIds.has(u.id));
+  const activeAssignedUserIds = new Set(
+    asignaciones.filter((a) => a.activo).map((a) => a.usuarioId)
+  );
+  const unassignedUsers = assignableUsers.filter((u) => !activeAssignedUserIds.has(u.id));
+  const activeAsignaciones = asignaciones.filter((a) => a.activo);
 
-  const openAssignModal = () => {
-    setUsuarioId(assignableUsers[0]?.id || 0);
+  const openAssignModal = (presetUsuarioId?: number) => {
+    const isChange = Boolean(presetUsuarioId);
+    setChangingUserMode(isChange);
+    setUsuarioId(presetUsuarioId || unassignedUsers[0]?.id || 0);
     setRolId(assignableRoles[0]?.id || 0);
     setShowAssignModal(true);
+  };
+
+  const revokeOtherActiveRoles = async (targetUsuarioId: number, keepId?: number) => {
+    const activeOthers = asignaciones.filter(
+      (a) => a.usuarioId === targetUsuarioId && a.activo && a.id !== keepId
+    );
+    await Promise.all(
+      activeOthers.map((old) =>
+        axiosClient.put(`/usuarioroles/${old.id}`, {
+          id: old.id,
+          usuarioId: old.usuarioId,
+          rolId: old.rolId,
+          activo: false
+        })
+      )
+    );
   };
 
   const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     try {
-      await axiosClient.post('/usuarioroles', { usuarioId, rolId });
+      await revokeOtherActiveRoles(usuarioId);
+      const existingInactive = asignaciones.find(
+        (a) => a.usuarioId === usuarioId && a.rolId === rolId && !a.activo
+      );
+      if (existingInactive) {
+        await axiosClient.put(`/usuarioroles/${existingInactive.id}`, {
+          id: existingInactive.id,
+          usuarioId,
+          rolId,
+          activo: true
+        });
+      } else {
+        await axiosClient.post('/usuarioroles', { usuarioId, rolId });
+      }
       setShowAssignModal(false);
       await loadData();
     } catch (err: any) {
@@ -75,6 +112,9 @@ export default function SuperAdminRolesPermisosPage() {
     }
     setErrorMsg(null);
     try {
+      if (!item.activo) {
+        await revokeOtherActiveRoles(item.usuarioId, item.id);
+      }
       await axiosClient.put(`/usuarioroles/${item.id}`, {
         id: item.id,
         usuarioId: item.usuarioId,
@@ -126,7 +166,7 @@ export default function SuperAdminRolesPermisosPage() {
         </div>
         <button
           type="button"
-          onClick={openAssignModal}
+          onClick={() => openAssignModal()}
           className="h-9 px-4 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer"
         >
           <span className="material-symbols-outlined text-[18px]">verified_user</span>
@@ -189,14 +229,14 @@ export default function SuperAdminRolesPermisosPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 text-xs">
-            {asignaciones.length === 0 ? (
+            {activeAsignaciones.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-8 text-center text-zinc-500">
-                  {loading ? 'Cargando asignaciones...' : 'No hay asignaciones registradas.'}
+                  {loading ? 'Cargando asignaciones...' : 'No hay asignaciones activas registradas.'}
                 </td>
               </tr>
             ) : (
-              asignaciones.map((item) => {
+              activeAsignaciones.map((item) => {
                 const u = usuarios.find((x) => x.id === item.usuarioId);
                 const r = roles.find((x) => x.id === item.rolId);
                 const roleName = r ? r.nombre : `Rol #${item.rolId}`;
@@ -226,7 +266,16 @@ export default function SuperAdminRolesPermisosPage() {
                         {item.activo ? 'Vigente' : 'Revocado'}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3 px-4 text-right space-x-2">
+                      {!isSuperAdminRole && item.activo && (
+                        <button
+                          type="button"
+                          onClick={() => openAssignModal(item.usuarioId)}
+                          className="px-2.5 py-1 rounded text-[11px] font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 cursor-pointer"
+                        >
+                          Cambiar Rol
+                        </button>
+                      )}
                       <button
                         type="button"
                         disabled={isSuperAdminRole}
@@ -252,7 +301,9 @@ export default function SuperAdminRolesPermisosPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 backdrop-blur-xs p-4">
           <div className="w-full max-w-md bg-white border border-zinc-200 rounded-xl shadow-xl overflow-hidden">
             <div className="px-5 py-4 bg-[#F4F4F5] border-b border-zinc-200 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[#18181B]">Asignar Rol a Usuario</h3>
+              <h3 className="text-sm font-bold text-[#18181B]">
+                {changingUserMode ? 'Cambiar Rol de Usuario' : 'Asignar Rol a Usuario'}
+              </h3>
               <button
                 type="button"
                 onClick={() => setShowAssignModal(false)}
@@ -264,20 +315,33 @@ export default function SuperAdminRolesPermisosPage() {
             <form onSubmit={handleAssign} className="p-5 space-y-4">
               <div>
                 <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
-                  Seleccionar Usuario
+                  {changingUserMode ? 'Usuario' : 'Seleccionar Usuario (sin rol activo)'}
                 </label>
-                <select
-                  required
-                  value={usuarioId}
-                  onChange={(e) => setUsuarioId(Number(e.target.value))}
-                  className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-indigo-600"
-                >
-                  {assignableUsers.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.nombreCompleto} ({u.email})
-                    </option>
-                  ))}
-                </select>
+                {changingUserMode ? (
+                  <div className="w-full h-9 px-3 rounded border border-zinc-200 bg-zinc-50 text-xs flex items-center font-semibold text-zinc-700">
+                    {(() => {
+                      const u = usuarios.find((x) => x.id === usuarioId);
+                      return u ? `${u.nombreCompleto} (${u.email})` : `Usuario #${usuarioId}`;
+                    })()}
+                  </div>
+                ) : unassignedUsers.length === 0 ? (
+                  <div className="p-2.5 rounded border border-amber-200 bg-amber-50 text-amber-800 text-xs">
+                    Todos los usuarios ya tienen un rol asignado. Usa <strong>Cambiar Rol</strong> en la tabla si deseas modificar alguno.
+                  </div>
+                ) : (
+                  <select
+                    required
+                    value={usuarioId}
+                    onChange={(e) => setUsuarioId(Number(e.target.value))}
+                    className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-indigo-600"
+                  >
+                    {unassignedUsers.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.nombreCompleto} ({u.email})
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               <div>
                 <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
@@ -309,9 +373,10 @@ export default function SuperAdminRolesPermisosPage() {
                 </button>
                 <button
                   type="submit"
-                  className="h-9 px-4 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold cursor-pointer"
+                  disabled={!changingUserMode && unassignedUsers.length === 0}
+                  className="h-9 px-4 rounded bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Confirmar Asignación
+                  {changingUserMode ? 'Guardar Cambio de Rol' : 'Confirmar Asignación'}
                 </button>
               </div>
             </form>

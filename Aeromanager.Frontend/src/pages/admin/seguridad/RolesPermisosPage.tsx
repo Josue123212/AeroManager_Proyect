@@ -9,6 +9,7 @@ export default function RolesPermisosPage() {
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [changingUserMode, setChangingUserMode] = useState(false);
   const [usuarioId, setUsuarioId] = useState<number>(0);
   const [rolId, setRolId] = useState<number>(0);
 
@@ -57,8 +58,12 @@ export default function RolesPermisosPage() {
       .map((a) => a.usuarioId)
   );
   const assignableUsers = usuarios.filter((u) => !privilegedUserIds.has(u.id));
+  const activeAssignedUserIds = new Set(
+    asignaciones.filter((a) => a.activo).map((a) => a.usuarioId)
+  );
+  const unassignedUsers = assignableUsers.filter((u) => !activeAssignedUserIds.has(u.id));
 
-  // Ocultar las filas de SuperAdmin en la tabla de asignaciones del Administrador
+  // Ocultar las filas de SuperAdmin y las asignaciones revocadas (solo activas)
   const superAdminRoleIds = new Set(
     roles
       .filter((r) => r.nombre.trim().toLowerCase() === 'superadmin')
@@ -70,13 +75,31 @@ export default function RolesPermisosPage() {
       .map((a) => a.usuarioId)
   );
   const visibleAsignaciones = asignaciones.filter(
-    (a) => !superAdminRoleIds.has(a.rolId) && !superAdminUserIds.has(a.usuarioId)
+    (a) => a.activo && !superAdminRoleIds.has(a.rolId) && !superAdminUserIds.has(a.usuarioId)
   );
 
-  const openModal = () => {
-    setUsuarioId(assignableUsers[0]?.id || 0);
+  const openModal = (presetUsuarioId?: number) => {
+    const isChange = Boolean(presetUsuarioId);
+    setChangingUserMode(isChange);
+    setUsuarioId(presetUsuarioId || unassignedUsers[0]?.id || 0);
     setRolId(assignableRoles[0]?.id || 0);
     setShowAssignModal(true);
+  };
+
+  const revokeOtherActiveRoles = async (targetUsuarioId: number, keepId?: number) => {
+    const activeOthers = asignaciones.filter(
+      (a) => a.usuarioId === targetUsuarioId && a.activo && a.id !== keepId
+    );
+    await Promise.all(
+      activeOthers.map((old) =>
+        axiosClient.put(`/usuarioroles/${old.id}`, {
+          id: old.id,
+          usuarioId: old.usuarioId,
+          rolId: old.rolId,
+          activo: false
+        })
+      )
+    );
   };
 
   const handleAssign = async (e: React.FormEvent) => {
@@ -91,7 +114,20 @@ export default function RolesPermisosPage() {
       return;
     }
     try {
-      await axiosClient.post('/usuarioroles', { usuarioId, rolId });
+      await revokeOtherActiveRoles(usuarioId);
+      const existingInactive = asignaciones.find(
+        (a) => a.usuarioId === usuarioId && a.rolId === rolId && !a.activo
+      );
+      if (existingInactive) {
+        await axiosClient.put(`/usuarioroles/${existingInactive.id}`, {
+          id: existingInactive.id,
+          usuarioId,
+          rolId,
+          activo: true
+        });
+      } else {
+        await axiosClient.post('/usuarioroles', { usuarioId, rolId });
+      }
       setShowAssignModal(false);
       await loadData();
     } catch (err: any) {
@@ -106,6 +142,9 @@ export default function RolesPermisosPage() {
     }
     setErrorMsg(null);
     try {
+      if (!item.activo) {
+        await revokeOtherActiveRoles(item.usuarioId, item.id);
+      }
       await axiosClient.put(`/usuarioroles/${item.id}`, {
         id: item.id,
         usuarioId: item.usuarioId,
@@ -132,7 +171,7 @@ export default function RolesPermisosPage() {
         </div>
         <button
           type="button"
-          onClick={openModal}
+          onClick={() => openModal()}
           className="h-9 px-4 rounded bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer"
         >
           <span className="material-symbols-outlined text-[18px]">verified_user</span>
@@ -225,23 +264,34 @@ export default function RolesPermisosPage() {
                         {item.activo ? 'Vigente' : 'Revocado'}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3 px-4 text-right space-x-2">
                       {isAdminRole ? (
                         <span className="inline-flex px-2.5 py-1 rounded bg-zinc-100 border border-zinc-200 text-zinc-500 text-[11px] font-semibold">
                           Gestionado por SuperAdmin
                         </span>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleToggleOperationalRole(item, roleName)}
-                          className={`px-2.5 py-1 rounded text-[11px] font-semibold cursor-pointer ${
-                            item.activo
-                              ? 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200'
-                              : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
-                          }`}
-                        >
-                          {item.activo ? 'Revocar' : 'Reactivar'}
-                        </button>
+                        <>
+                          {item.activo && (
+                            <button
+                              type="button"
+                              onClick={() => openModal(item.usuarioId)}
+                              className="px-2.5 py-1 rounded text-[11px] font-semibold bg-sky-50 hover:bg-sky-100 text-[#0284C7] border border-sky-200 cursor-pointer"
+                            >
+                              Cambiar Rol
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleToggleOperationalRole(item, roleName)}
+                            className={`px-2.5 py-1 rounded text-[11px] font-semibold cursor-pointer ${
+                              item.activo
+                                ? 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200'
+                                : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
+                            }`}
+                          >
+                            {item.activo ? 'Revocar' : 'Reactivar'}
+                          </button>
+                        </>
                       )}
                     </td>
                   </tr>
@@ -256,7 +306,9 @@ export default function RolesPermisosPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 backdrop-blur-xs p-4">
           <div className="w-full max-w-md bg-white border border-zinc-200 rounded-xl shadow-xl overflow-hidden">
             <div className="px-5 py-4 bg-[#F4F4F5] border-b border-zinc-200 flex items-center justify-between">
-              <h3 className="text-sm font-bold text-[#18181B]">Asignar Rol Operativo a Usuario</h3>
+              <h3 className="text-sm font-bold text-[#18181B]">
+                {changingUserMode ? 'Cambiar Rol Operativo' : 'Asignar Rol Operativo a Usuario'}
+              </h3>
               <button
                 type="button"
                 onClick={() => setShowAssignModal(false)}
@@ -268,20 +320,33 @@ export default function RolesPermisosPage() {
             <form onSubmit={handleAssign} className="p-5 space-y-4">
               <div>
                 <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
-                  Seleccionar Usuario Operativo
+                  {changingUserMode ? 'Usuario Operativo' : 'Seleccionar Usuario (sin rol activo)'}
                 </label>
-                <select
-                  required
-                  value={usuarioId}
-                  onChange={(e) => setUsuarioId(Number(e.target.value))}
-                  className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
-                >
-                  {assignableUsers.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.nombreCompleto} ({u.email})
-                    </option>
-                  ))}
-                </select>
+                {changingUserMode ? (
+                  <div className="w-full h-9 px-3 rounded border border-zinc-200 bg-zinc-50 text-xs flex items-center font-semibold text-zinc-700">
+                    {(() => {
+                      const u = usuarios.find((x) => x.id === usuarioId);
+                      return u ? `${u.nombreCompleto} (${u.email})` : `Usuario #${usuarioId}`;
+                    })()}
+                  </div>
+                ) : unassignedUsers.length === 0 ? (
+                  <div className="p-2.5 rounded border border-amber-200 bg-amber-50 text-amber-800 text-xs">
+                    Todos los usuarios operativos ya tienen un rol asignado. Usa <strong>Cambiar Rol</strong> en la tabla si deseas modificar alguno.
+                  </div>
+                ) : (
+                  <select
+                    required
+                    value={usuarioId}
+                    onChange={(e) => setUsuarioId(Number(e.target.value))}
+                    className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
+                  >
+                    {unassignedUsers.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.nombreCompleto} ({u.email})
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               <div>
                 <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
@@ -313,9 +378,10 @@ export default function RolesPermisosPage() {
                 </button>
                 <button
                   type="submit"
-                  className="h-9 px-4 rounded bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-semibold cursor-pointer"
+                  disabled={!changingUserMode && unassignedUsers.length === 0}
+                  className="h-9 px-4 rounded bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Confirmar Asignación
+                  {changingUserMode ? 'Guardar Cambio de Rol' : 'Confirmar Asignación'}
                 </button>
               </div>
             </form>

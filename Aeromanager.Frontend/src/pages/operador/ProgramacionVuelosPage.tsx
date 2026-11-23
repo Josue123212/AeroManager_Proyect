@@ -26,6 +26,23 @@ export default function ProgramacionVuelosPage() {
   const [estadoTab, setEstadoTab] = useState<string>('ALL');
   const [terminalFilter, setTerminalFilter] = useState<string>('ALL');
 
+  const isSuperAdmin = (() => {
+    try {
+      const raw = localStorage.getItem('aeromanager_user');
+      if (!raw) return false;
+      const parsed = JSON.parse(raw);
+      const roles: string[] = Array.isArray(parsed?.roles) ? parsed.roles : [];
+      return roles.some((r) => r.trim().toLowerCase() === 'superadmin');
+    } catch {
+      return false;
+    }
+  })();
+
+  const isVueloCerrado = (est: string) => {
+    const up = (est || '').toUpperCase();
+    return up.includes('ATERRIZ') || up.includes('CANCEL');
+  };
+
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<VueloDto | null>(null);
   const [numeroVuelo, setNumeroVuelo] = useState('');
@@ -391,13 +408,25 @@ export default function ProgramacionVuelosPage() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => openEdit(item)}
-                        className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
-                      >
-                        Editar / Estado
-                      </button>
+                      {isVueloCerrado(item.estado) && !isSuperAdmin ? (
+                        <span
+                          title="Vuelo histórico cerrado: solo SuperAdmin puede modificarlo"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-zinc-100 border border-zinc-200 text-zinc-400 font-medium cursor-not-allowed"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">lock</span>
+                          <span>Cerrado</span>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => openEdit(item)}
+                          className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
+                        >
+                          {isVueloCerrado(item.estado) && isSuperAdmin
+                            ? 'Override SA'
+                            : 'Editar / Estado'}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -430,6 +459,12 @@ export default function ProgramacionVuelosPage() {
                 de llegada debe ser estrictamente posterior a la fecha y hora de salida. La capacidad
                 y precio base deben ser mayores a cero.
               </div>
+              {editing && isVueloCerrado(editing.estado) && isSuperAdmin && (
+                <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium">
+                  <strong>Modo Override SuperAdmin:</strong> Estás editando un vuelo histórico en
+                  estado <strong>{editing.estado}</strong>.
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>

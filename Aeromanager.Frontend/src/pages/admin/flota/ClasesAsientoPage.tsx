@@ -66,6 +66,21 @@ export default function ClasesAsientoPage() {
     }
   };
 
+  const handleToggleActivo = async (item: ClaseAsientoDto) => {
+    setErrorMsg(null);
+    try {
+      await axiosClient.put(`/clasesasiento/${item.id}`, {
+        id: item.id,
+        nombre: item.nombre,
+        multiplicadorTarifa: item.multiplicadorTarifa,
+        activo: !item.activo
+      });
+      await loadData();
+    } catch (err: any) {
+      setErrorMsg(extractApiError(err, 'Error al actualizar estado de la clase de asiento.'));
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -102,13 +117,14 @@ export default function ClasesAsientoPage() {
               <th className="py-2.5 px-4 font-semibold">Nombre de la Clase</th>
               <th className="py-2.5 px-4 font-semibold">Multiplicador de Tarifa</th>
               <th className="py-2.5 px-4 font-semibold">Simulación (Base $100 USD)</th>
+              <th className="py-2.5 px-4 font-semibold">Estado</th>
               <th className="py-2.5 px-4 font-semibold text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 text-xs">
             {clases.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-zinc-500">
+                <td colSpan={6} className="py-8 text-center text-zinc-500">
                   {loading
                     ? 'Cargando información...'
                     : 'No hay clases de asiento registradas.'}
@@ -127,13 +143,31 @@ export default function ClasesAsientoPage() {
                   <td className="py-3 px-4 font-mono-code text-emerald-700 font-semibold">
                     ${(100 * item.multiplicadorTarifa).toFixed(2)} USD
                   </td>
-                  <td className="py-3 px-4 text-right">
+                  <td className="py-3 px-4">
+                    <span
+                      className={`inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold ${
+                        item.activo
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                          : 'bg-red-50 border-red-200 text-red-700'
+                      }`}
+                    >
+                      {item.activo ? 'Activa' : 'Inactiva'}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-right space-x-2">
                     <button
                       type="button"
                       onClick={() => openEdit(item)}
                       className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
                     >
                       Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleActivo(item)}
+                      className="px-2.5 py-1 rounded bg-red-50 hover:bg-red-100 text-red-700 font-medium cursor-pointer"
+                    >
+                      {item.activo ? 'Desactivar' : 'Reactivar'}
                     </button>
                   </td>
                 </tr>

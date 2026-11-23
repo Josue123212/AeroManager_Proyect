@@ -79,6 +79,23 @@ export default function ModelosAvionPage() {
     }
   };
 
+  const handleToggleActivo = async (item: ModeloAvionDto) => {
+    setErrorMsg(null);
+    try {
+      await axiosClient.put(`/modelosavion/${item.id}`, {
+        id: item.id,
+        fabricante: item.fabricante,
+        nombreModelo: item.nombreModelo,
+        capacidadTeorica: item.capacidadTeorica,
+        autonomiaKm: item.autonomiaKm,
+        activo: !item.activo
+      });
+      await loadData();
+    } catch (err: any) {
+      setErrorMsg(extractApiError(err, 'Error al actualizar estado del modelo de avión.'));
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -116,13 +133,14 @@ export default function ModelosAvionPage() {
               <th className="py-2.5 px-4 font-semibold">Modelo</th>
               <th className="py-2.5 px-4 font-semibold">Capacidad Teórica</th>
               <th className="py-2.5 px-4 font-semibold">Autonomía (KM)</th>
+              <th className="py-2.5 px-4 font-semibold">Estado</th>
               <th className="py-2.5 px-4 font-semibold text-right">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 text-xs">
             {modelos.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-zinc-500">
+                <td colSpan={7} className="py-8 text-center text-zinc-500">
                   {loading
                     ? 'Cargando información...'
                     : 'No hay modelos de avión registrados.'}
@@ -140,13 +158,31 @@ export default function ModelosAvionPage() {
                   <td className="py-3 px-4 font-mono-code">
                     {item.autonomiaKm.toLocaleString()} km
                   </td>
-                  <td className="py-3 px-4 text-right">
+                  <td className="py-3 px-4">
+                    <span
+                      className={`inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold ${
+                        item.activo
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                          : 'bg-red-50 border-red-200 text-red-700'
+                      }`}
+                    >
+                      {item.activo ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-right space-x-2">
                     <button
                       type="button"
                       onClick={() => openEdit(item)}
                       className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
                     >
                       Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleActivo(item)}
+                      className="px-2.5 py-1 rounded bg-red-50 hover:bg-red-100 text-red-700 font-medium cursor-pointer"
+                    >
+                      {item.activo ? 'Desactivar' : 'Reactivar'}
                     </button>
                   </td>
                 </tr>

@@ -91,7 +91,16 @@ export default function SuperAdminHeader({ children }: SuperAdminHeaderProps) {
         // Ignorar parse error
       }
     }
-    const updateClock = () => setUtcTime(`UTC ${new Date().toISOString().slice(11, 19)}`);
+    const updateClock = () => {
+      const now = new Date();
+      const localStr = now.toLocaleTimeString('es-PE', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      setUtcTime(`${localStr} · UTC ${now.toISOString().slice(11, 16)}`);
+    };
     updateClock();
     const timer = setInterval(updateClock, 1000);
     return () => clearInterval(timer);

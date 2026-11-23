@@ -71,7 +71,13 @@ export default function AdminHeader({ children }: AdminHeaderProps) {
   useEffect(() => {
     const updateClock = () => {
       const now = new Date();
-      setUtcTime(`UTC ${now.toISOString().slice(11, 19)}`);
+      const localStr = now.toLocaleTimeString('es-PE', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      setUtcTime(`${localStr} · UTC ${now.toISOString().slice(11, 16)}`);
     };
     updateClock();
     const timer = setInterval(updateClock, 1000);

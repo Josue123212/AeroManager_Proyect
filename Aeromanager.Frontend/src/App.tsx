@@ -1,11 +1,12 @@
 import React from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import LoginPage from './pages/auth/LoginPage';
 import ProtectedRoute, { getSessionHomePath } from './components/auth/ProtectedRoute';
 import AdminHeader from './components/layout/AdminHeader';
 import OperatorSidebar from './components/layout/OperatorSidebar';
 import CounterNavbar from './components/layout/CounterNavbar';
 import SuperAdminHeader from './components/layout/SuperAdminHeader';
+import GeminiFloatingAssistant from './components/ai/GeminiFloatingAssistant';
 import SuperAdminDashboardPage from './pages/superadmin/SuperAdminDashboardPage';
 import SuperAdminUsuariosPage from './pages/superadmin/SuperAdminUsuariosPage';
 import SuperAdminRolesPermisosPage from './pages/superadmin/SuperAdminRolesPermisosPage';
@@ -24,7 +25,6 @@ import AsientosPage from './pages/admin/flota/AsientosPage';
 import UsuariosPage from './pages/admin/seguridad/UsuariosPage';
 import RolesPermisosPage from './pages/admin/seguridad/RolesPermisosPage';
 import ReportesExcelPage from './pages/admin/operaciones/ReportesExcelPage';
-import AsistenteIaPage from './pages/admin/operaciones/AsistenteIaPage';
 import MonitorFidsPage from './pages/operador/MonitorFidsPage';
 import RutasOperadorPage from './pages/operador/RutasOperadorPage';
 import ProgramacionVuelosPage from './pages/operador/ProgramacionVuelosPage';
@@ -41,8 +41,13 @@ function RootRedirect() {
 }
 
 export default function App() {
+  const { pathname } = useLocation();
+  const showAiAssistant =
+    pathname.startsWith('/admin') || pathname.startsWith('/superadmin');
+
   return (
-    <Routes>
+    <>
+      <Routes>
       <Route path="/" element={<RootRedirect />} />
       <Route path="/login" element={<LoginPage />} />
       <Route
@@ -69,7 +74,6 @@ export default function App() {
                 <Route path="ver/admin/usuarios" element={<UsuariosPage />} />
                 <Route path="ver/admin/roles-permisos" element={<RolesPermisosPage />} />
                 <Route path="ver/admin/reportes-excel" element={<ReportesExcelPage />} />
-                <Route path="ver/admin/asistente-ia" element={<AsistenteIaPage />} />
                 <Route path="ver/operador/fids" element={<MonitorFidsPage />} />
                 <Route path="ver/operador/rutas" element={<RutasOperadorPage />} />
                 <Route path="ver/operador/vuelos" element={<ProgramacionVuelosPage />} />
@@ -107,7 +111,6 @@ export default function App() {
                 <Route path="usuarios" element={<UsuariosPage />} />
                 <Route path="roles-permisos" element={<RolesPermisosPage />} />
                 <Route path="reportes-excel" element={<ReportesExcelPage />} />
-                <Route path="asistente-ia" element={<AsistenteIaPage />} />
                 <Route path="*" element={<DashboardEjecutivoPage />} />
               </Routes>
             </AdminHeader>
@@ -150,5 +153,7 @@ export default function App() {
       />
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
+    {showAiAssistant && <GeminiFloatingAssistant />}
+    </>
   );
 }

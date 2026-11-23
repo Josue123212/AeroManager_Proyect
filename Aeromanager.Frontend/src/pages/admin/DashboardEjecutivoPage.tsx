@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import axiosClient, { extractApiError } from '../../api/axiosClient';
 import { resolveScopedPath } from '../../utils/scopedNavigation';
 import { AeropuertoDto, AvionDto, ReservaDto, RutaDto, VueloDto } from '../../types/models';
+import { openGeminiAssistant } from '../../components/ai/GeminiFloatingAssistant';
 
 export default function DashboardEjecutivoPage() {
   const { pathname } = useLocation();
@@ -496,13 +497,14 @@ export default function DashboardEjecutivoPage() {
               <span className="material-symbols-outlined text-[17px]">table_chart</span>
               <span>Ir a Reportes Excel (.xls)</span>
             </Link>
-            <Link
-              to={resolveScopedPath(pathname, '/admin/asistente-ia')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-white bg-[#0284C7] hover:bg-[#0369A1] text-xs font-semibold transition-colors shadow-2xs"
+            <button
+              type="button"
+              onClick={openGeminiAssistant}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-white bg-[#0284C7] hover:bg-[#0369A1] text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
             >
               <span className="material-symbols-outlined text-[17px]">smart_toy</span>
               <span>Abrir Asistente IA (Gemini)</span>
-            </Link>
+            </button>
           </div>
         </div>
 

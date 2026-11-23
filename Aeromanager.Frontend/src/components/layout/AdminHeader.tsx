@@ -44,10 +44,9 @@ const ADMIN_SECTIONS: NavSection[] = [
     ]
   },
   {
-    title: 'Operaciones & IA',
+    title: 'Operaciones',
     items: [
-      { label: 'Reportes Excel (.xls)', icon: 'table_chart', path: '/admin/reportes-excel' },
-      { label: 'Asistente IA (Gemini)', icon: 'smart_toy', path: '/admin/asistente-ia' }
+      { label: 'Reportes Excel (.xls)', icon: 'table_chart', path: '/admin/reportes-excel' }
     ]
   }
 ];

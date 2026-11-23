@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
+import { openGeminiAssistant } from '../../components/ai/GeminiFloatingAssistant';
 import {
   AeropuertoDto,
   AsientoVueloDto,
@@ -291,12 +292,13 @@ export default function SuperAdminDashboardPage() {
               >
                 Matriz RBAC
               </Link>
-              <Link
-                to="/superadmin/ver/admin/asistente-ia"
-                className="px-2.5 py-1 rounded bg-sky-50 hover:bg-sky-100 text-[#0284C7] text-[11px] font-semibold"
+              <button
+                type="button"
+                onClick={openGeminiAssistant}
+                className="px-2.5 py-1 rounded bg-sky-50 hover:bg-sky-100 text-[#0284C7] text-[11px] font-semibold cursor-pointer"
               >
                 Gemini IA
-              </Link>
+              </button>
             </div>
           </div>
           <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">

@@ -58,9 +58,11 @@ export default function CarteleraVuelosCounterPage() {
     loadData();
   }, []);
 
-  const vuelosDisponibles = vuelos.filter(
-    (v) => v.activo && v.estado.toUpperCase() !== 'CANCELADO'
-  );
+  const vuelosDisponibles = vuelos.filter((v) => {
+    if (!v.activo) return false;
+    const up = v.estado.toUpperCase();
+    return !up.includes('CANCEL') && !up.includes('VUELO') && !up.includes('ATERRIZ');
+  });
   const totalAsientosLibres = asientosVuelo.filter(
     (av) => av.activo && !av.estaOcupado
   ).length;
@@ -333,16 +335,32 @@ export default function CarteleraVuelosCounterPage() {
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleSeleccionarVueloParaReserva(v.id)}
-                    className="w-full h-9 rounded bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[17px]">
-                      airline_seat_recline_normal
-                    </span>
-                    <span>Abrir Mapa de Asientos / Reservar</span>
-                  </button>
+                  {(() => {
+                    const stUp = v.estado.toUpperCase();
+                    const isVentaAbierta =
+                      stUp.includes('PROGRAM') || stUp.includes('RETRAS') || stUp.includes('DEMOR');
+                    return (
+                      <button
+                        type="button"
+                        disabled={!isVentaAbierta}
+                        onClick={() => handleSeleccionarVueloParaReserva(v.id)}
+                        className={`w-full h-9 rounded text-xs font-semibold flex items-center justify-center gap-1.5 shadow-2xs transition-colors ${
+                          isVentaAbierta
+                            ? 'bg-[#0284C7] hover:bg-[#0369A1] text-white cursor-pointer'
+                            : 'bg-zinc-200 text-zinc-500 cursor-not-allowed'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[17px]">
+                          {isVentaAbierta ? 'airline_seat_recline_normal' : 'lock_clock'}
+                        </span>
+                        <span>
+                          {isVentaAbierta
+                            ? 'Abrir Mapa de Asientos / Reservar'
+                            : `Venta Cerrada (${v.estado})`}
+                        </span>
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
             );

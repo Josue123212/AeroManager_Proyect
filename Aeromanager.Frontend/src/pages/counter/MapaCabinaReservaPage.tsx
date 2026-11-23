@@ -99,6 +99,12 @@ export default function MapaCabinaReservaPage() {
   }, []);
 
   const currentVuelo = vuelos.find((v) => v.id === selectedVueloId);
+  const estadoVueloUp = (currentVuelo?.estado || '').toUpperCase();
+  const isVentaAbierta =
+    Boolean(currentVuelo) &&
+    (estadoVueloUp.includes('PROGRAM') ||
+      estadoVueloUp.includes('RETRAS') ||
+      estadoVueloUp.includes('DEMOR'));
   const currentRuta = currentVuelo ? rutas.find((r) => r.id === currentVuelo.rutaId) : null;
   const origAero = currentRuta
     ? aeropuertos.find((a) => a.id === currentRuta.aeropuertoOrigenId)
@@ -173,7 +179,7 @@ export default function MapaCabinaReservaPage() {
   };
 
   const openConfirmModal = () => {
-    if (!selectedItem) return;
+    if (!selectedItem || !isVentaAbierta) return;
     setCodigoTicket(generateUniqueTicketCode());
     if (!selectedPasajeroId && pasajeros.length > 0) {
       setSelectedPasajeroId(pasajeros[0].id);
@@ -506,13 +512,31 @@ export default function MapaCabinaReservaPage() {
                     </div>
                   </div>
 
+                  {!isVentaAbierta && currentVuelo && (
+                    <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold">
+                      Cierre de Ventas Counter (DCS): el vuelo está en estado{' '}
+                      <strong>{currentVuelo.estado}</strong> y no admite nuevas reservas.
+                    </div>
+                  )}
+
                   <button
                     type="button"
+                    disabled={!isVentaAbierta}
                     onClick={openConfirmModal}
-                    className="w-full h-10 rounded-lg bg-[#0284C7] hover:bg-[#0369A1] text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                    className={`w-full h-10 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs ${
+                      isVentaAbierta
+                        ? 'bg-[#0284C7] hover:bg-[#0369A1] text-white cursor-pointer'
+                        : 'bg-zinc-200 text-zinc-500 cursor-not-allowed'
+                    }`}
                   >
-                    <span>Continuar a Confirmación de Reserva</span>
-                    <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                    <span>
+                      {isVentaAbierta
+                        ? 'Continuar a Confirmación de Reserva'
+                        : `Venta Cerrada (${currentVuelo?.estado ?? 'Cerrado'})`}
+                    </span>
+                    <span className="material-symbols-outlined text-[18px]">
+                      {isVentaAbierta ? 'arrow_forward' : 'lock_clock'}
+                    </span>
                   </button>
                 </>
               ) : (

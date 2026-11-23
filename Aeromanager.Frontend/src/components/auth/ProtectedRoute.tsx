@@ -15,6 +15,25 @@ interface StoredUser {
   roles: string[];
 }
 
+function isJwtExpired(token: string): boolean {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return true;
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+    const payload = JSON.parse(atob(padded)) as { exp?: number };
+    if (typeof payload.exp !== 'number') return true;
+    return Date.now() >= payload.exp * 1000;
+  } catch {
+    return true;
+  }
+}
+
+function clearSessionStorage() {
+  localStorage.removeItem('aeromanager_token');
+  localStorage.removeItem('aeromanager_user');
+}
+
 export function getHomePathForRoles(roles: string[]): string {
   const normalized = roles.map((r) => r.trim().toLowerCase());
   if (normalized.some((r) => r === 'superadmin')) return '/superadmin/dashboard';
@@ -27,12 +46,16 @@ export function getHomePathForRoles(roles: string[]): string {
 export function getSessionHomePath(): string {
   const token = localStorage.getItem('aeromanager_token');
   const rawUser = localStorage.getItem('aeromanager_user');
-  if (!token || !rawUser) return '/login';
+  if (!token || !rawUser || isJwtExpired(token)) {
+    if (token || rawUser) clearSessionStorage();
+    return '/login';
+  }
   try {
     const parsed = JSON.parse(rawUser) as Partial<StoredUser>;
     const roles = Array.isArray(parsed?.roles) ? parsed.roles : [];
     return roles.length > 0 ? getHomePathForRoles(roles) : '/login';
   } catch {
+    clearSessionStorage();
     return '/login';
   }
 }
@@ -41,7 +64,8 @@ export default function ProtectedRoute({ allowedRoles, children }: ProtectedRout
   const token = localStorage.getItem('aeromanager_token');
   const rawUser = localStorage.getItem('aeromanager_user');
 
-  if (!token || !rawUser) {
+  if (!token || !rawUser || isJwtExpired(token)) {
+    if (token || rawUser) clearSessionStorage();
     return <Navigate to="/login" replace />;
   }
 
@@ -49,8 +73,7 @@ export default function ProtectedRoute({ allowedRoles, children }: ProtectedRout
   try {
     user = JSON.parse(rawUser);
   } catch {
-    localStorage.removeItem('aeromanager_token');
-    localStorage.removeItem('aeromanager_user');
+    clearSessionStorage();
     return <Navigate to="/login" replace />;
   }
 

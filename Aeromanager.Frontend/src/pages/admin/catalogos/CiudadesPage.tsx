@@ -72,6 +72,21 @@ export default function CiudadesPage() {
     }
   };
 
+  const handleToggleActivo = async (item: CiudadDto) => {
+    setErrorMsg(null);
+    try {
+      await axiosClient.put(`/ciudades/${item.id}`, {
+        id: item.id,
+        nombre: item.nombre,
+        paisId: item.paisId,
+        activo: !item.activo
+      });
+      await loadData();
+    } catch (err: any) {
+      setErrorMsg(extractApiError(err, 'Error al actualizar estado de la ciudad.'));
+    }
+  };
+
   const getPaisNombre = (id: number) => {
     const p = paises.find((x) => x.id === id);
     return p ? `${p.nombre} (${p.codigoIso})` : `País #${id}`;
@@ -155,13 +170,20 @@ export default function CiudadesPage() {
                       {item.activo ? 'Activo' : 'Inactivo'}
                     </span>
                   </td>
-                  <td className="py-3 px-4 text-right">
+                  <td className="py-3 px-4 text-right space-x-2">
                     <button
                       type="button"
                       onClick={() => openEdit(item)}
                       className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
                     >
                       Editar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleActivo(item)}
+                      className="px-2.5 py-1 rounded bg-red-50 hover:bg-red-100 text-red-700 font-medium cursor-pointer"
+                    >
+                      {item.activo ? 'Desactivar' : 'Reactivar'}
                     </button>
                   </td>
                 </tr>

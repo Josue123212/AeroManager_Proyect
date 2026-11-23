@@ -108,6 +108,27 @@ export default function UsuariosPage() {
     }
   };
 
+  const handleToggleActivo = async (item: UsuarioDto) => {
+    setErrorMsg(null);
+    if (isAdminUser(item.id)) {
+      setErrorMsg('Las cuentas con rol Administrador solo pueden ser modificadas por un SuperAdmin.');
+      return;
+    }
+    const nextActivo = !item.activo;
+    try {
+      await axiosClient.put(`/usuarios/${item.id}`, {
+        id: item.id,
+        nombreCompleto: item.nombreCompleto,
+        email: item.email,
+        estadoAcceso: nextActivo ? 'Activo' : 'Suspendido',
+        activo: nextActivo
+      });
+      await loadData();
+    } catch (err: any) {
+      setErrorMsg(extractApiError(err, 'Error al actualizar estado del usuario.'));
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -195,19 +216,28 @@ export default function UsuariosPage() {
                     <td className="py-3 px-4 font-mono-code text-zinc-600">
                       {new Date(item.fechaCreacion).toLocaleDateString('es-PE')}
                     </td>
-                    <td className="py-3 px-4 text-right">
+                    <td className="py-3 px-4 text-right space-x-2">
                       {protectedAdmin ? (
                         <span className="inline-flex px-2.5 py-1 rounded bg-zinc-100 border border-zinc-200 text-zinc-500 text-[11px] font-semibold">
                           Gestionado por SuperAdmin
                         </span>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => openEdit(item)}
-                          className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
-                        >
-                          Editar
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => openEdit(item)}
+                            className="px-2.5 py-1 rounded bg-[#F4F4F5] hover:bg-zinc-200 text-zinc-700 font-medium cursor-pointer"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleActivo(item)}
+                            className="px-2.5 py-1 rounded bg-red-50 hover:bg-red-100 text-red-700 font-medium cursor-pointer"
+                          >
+                            {item.activo ? 'Desactivar' : 'Reactivar'}
+                          </button>
+                        </>
                       )}
                     </td>
                   </tr>

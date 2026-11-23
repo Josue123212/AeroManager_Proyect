@@ -84,6 +84,26 @@ export default function PadronPasajerosCounterPage() {
     setShowModal(true);
   };
 
+  const handleToggleActivo = async (item: PasajeroDto) => {
+    setErrorMsg(null);
+    try {
+      await axiosClient.put(`/pasajeros/${item.id}`, {
+        id: item.id,
+        nombres: item.nombres,
+        apellidos: item.apellidos,
+        tipoDocumentoId: item.tipoDocumentoId,
+        numeroDocumento: item.numeroDocumento,
+        email: item.email,
+        telefono: item.telefono || '',
+        nacionalidadPaisId: item.nacionalidadPaisId,
+        activo: !item.activo
+      });
+      await loadData();
+    } catch (err: any) {
+      setErrorMsg(extractApiError(err, 'Error al actualizar estado del pasajero.'));
+    }
+  };
+
   const handleSave = async (e: React.FormEvent, goToCabinAfter: boolean) => {
     e.preventDefault();
     setErrorMsg(null);
@@ -275,8 +295,16 @@ export default function PadronPasajerosCounterPage() {
                       </button>
                       <button
                         type="button"
+                        onClick={() => handleToggleActivo(item)}
+                        className="px-2.5 py-1 rounded bg-red-50 hover:bg-red-100 text-red-700 font-medium cursor-pointer"
+                      >
+                        {item.activo ? 'Desactivar' : 'Reactivar'}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!item.activo}
                         onClick={() => handleIniciarReservaPasajero(item.id)}
-                        className="px-2.5 py-1 rounded bg-[#0284C7] hover:bg-[#0369A1] text-white font-semibold cursor-pointer"
+                        className="px-2.5 py-1 rounded bg-[#0284C7] hover:bg-[#0369A1] text-white font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Iniciar Reserva →
                       </button>

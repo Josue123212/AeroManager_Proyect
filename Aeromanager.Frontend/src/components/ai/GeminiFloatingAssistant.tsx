@@ -22,8 +22,50 @@ export function openGeminiAssistant() {
   window.dispatchEvent(new CustomEvent(OPEN_GEMINI_ASSISTANT_EVENT));
 }
 
+const BUBBLE_SIZE = 56;
+const MARGIN = 20;
+const POS_STORAGE_KEY = 'aeromanager_ai_bubble_pos';
+
+function clampPos(x: number, y: number, w = BUBBLE_SIZE, h = BUBBLE_SIZE) {
+  const maxX = Math.max(12, window.innerWidth - w - 12);
+  const maxY = Math.max(12, window.innerHeight - h - 12);
+  return {
+    x: Math.min(Math.max(12, x), maxX),
+    y: Math.min(Math.max(12, y), maxY)
+  };
+}
+
+function getInitialPos() {
+  try {
+    const raw = localStorage.getItem(POS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as { x: number; y: number };
+      if (typeof parsed?.x === 'number' && typeof parsed?.y === 'number') {
+        return clampPos(parsed.x, parsed.y);
+      }
+    }
+  } catch {
+    // ignorar error de lectura
+  }
+  return {
+    x: Math.max(12, window.innerWidth - BUBBLE_SIZE - MARGIN),
+    y: Math.max(12, window.innerHeight - BUBBLE_SIZE - MARGIN)
+  };
+}
+
 export default function GeminiFloatingAssistant() {
   const [isOpen, setIsOpen] = useState(false);
+  const [pos, setPos] = useState<{ x: number; y: number }>(() => getInitialPos());
+  const [dragging, setDragging] = useState(false);
+  const dragRef = useRef<{
+    startX: number;
+    startY: number;
+    originX: number;
+    originY: number;
+    moved: boolean;
+    w: number;
+    h: number;
+  } | null>(null);
   const [pregunta, setPregunta] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -42,6 +84,61 @@ export default function GeminiFloatingAssistant() {
     window.addEventListener(OPEN_GEMINI_ASSISTANT_EVENT, handleOpen);
     return () => window.removeEventListener(OPEN_GEMINI_ASSISTANT_EVENT, handleOpen);
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(POS_STORAGE_KEY, JSON.stringify(pos));
+    } catch {
+      // ignorar
+    }
+  }, [pos]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setPos((prev) => clampPos(prev.x, prev.y));
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const startDrag = (e: React.PointerEvent, w = BUBBLE_SIZE, h = BUBBLE_SIZE) => {
+    if (e.button !== 0) return;
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: pos.x,
+      originY: pos.y,
+      moved: false,
+      w,
+      h
+    };
+    setDragging(true);
+
+    const onMove = (ev: PointerEvent) => {
+      if (!dragRef.current) return;
+      const dx = ev.clientX - dragRef.current.startX;
+      const dy = ev.clientY - dragRef.current.startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        dragRef.current.moved = true;
+      }
+      const next = clampPos(
+        dragRef.current.originX + dx,
+        dragRef.current.originY + dy,
+        dragRef.current.w,
+        dragRef.current.h
+      );
+      setPos(next);
+    };
+
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      setDragging(false);
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -91,29 +188,55 @@ export default function GeminiFloatingAssistant() {
   };
 
   if (!isOpen) {
+    const showTooltipRight = pos.x < window.innerWidth / 2;
     return (
-      <div className="fixed bottom-5 right-5 z-50">
+      <div
+        style={{ left: `${pos.x}px`, top: `${pos.y}px` }}
+        className="fixed z-50 touch-none select-none"
+      >
         <button
           type="button"
-          onClick={() => setIsOpen(true)}
-          title="Abrir Copilot Operativo IA (Gemini)"
+          onPointerDown={(e) => startDrag(e, BUBBLE_SIZE, BUBBLE_SIZE)}
+          onClick={() => {
+            if (dragRef.current?.moved) return;
+            setIsOpen(true);
+          }}
+          title="Arrastra para mover o haz clic para abrir Copilot IA"
           aria-label="Abrir Copilot Operativo IA (Gemini)"
-          className="group relative w-14 h-14 rounded-full bg-gradient-to-br from-[#0284C7] to-[#4F46E5] hover:from-[#0369A1] hover:to-[#4338CA] text-white shadow-xl hover:shadow-2xl flex items-center justify-center transition-all duration-200 hover:scale-105 cursor-pointer ring-4 ring-white"
+          className={`group relative w-14 h-14 rounded-full bg-gradient-to-br from-[#0284C7] to-[#4F46E5] hover:from-[#0369A1] hover:to-[#4338CA] text-white shadow-xl hover:shadow-2xl flex items-center justify-center ring-4 ring-white ${
+            dragging ? 'cursor-grabbing scale-105' : 'cursor-grab hover:scale-105 transition-transform duration-150'
+          }`}
         >
           <span className="material-symbols-outlined text-[28px]">smart_toy</span>
           <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-white" />
-          <span className="pointer-events-none absolute right-16 whitespace-nowrap px-2.5 py-1 rounded-lg bg-[#0F172A] text-white text-[11px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity shadow-md">
-            Asistente IA (Gemini)
+          <span
+            className={`pointer-events-none absolute top-1/2 -translate-y-1/2 whitespace-nowrap px-2.5 py-1 rounded-lg bg-[#0F172A] text-white text-[11px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity shadow-md ${
+              showTooltipRight ? 'left-16' : 'right-16'
+            }`}
+          >
+            Asistente IA (arrastrable)
           </span>
         </button>
       </div>
     );
   }
 
+  const popupW = Math.min(400, window.innerWidth - 24);
+  const popupH = Math.min(530, Math.round(window.innerHeight * 0.82));
+  const popupPos = clampPos(
+    pos.x > window.innerWidth / 2 ? pos.x + BUBBLE_SIZE - popupW : pos.x,
+    pos.y > window.innerHeight / 2 ? pos.y + BUBBLE_SIZE - popupH : pos.y,
+    popupW,
+    popupH
+  );
+
   return (
-    <div className="fixed bottom-5 right-5 z-50 w-[calc(100vw-2rem)] sm:w-[400px] h-[530px] max-h-[82vh] bg-white border border-zinc-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+    <div
+      style={{ left: `${popupPos.x}px`, top: `${popupPos.y}px`, width: `${popupW}px`, height: `${popupH}px` }}
+      className="fixed z-50 bg-white border border-zinc-200 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+    >
       {/* Cabecera estilo Messenger (sin botón X, solo minimizar) */}
-      <div className="px-4 py-3 bg-gradient-to-r from-[#0284C7] to-[#4F46E5] text-white flex items-center justify-between shrink-0">
+      <div className="px-4 py-3 bg-gradient-to-r from-[#0284C7] to-[#4F46E5] text-white flex items-center justify-between shrink-0 select-none">
         <div className="flex items-center gap-2.5">
           <div className="relative w-9 h-9 rounded-full bg-white/15 border border-white/25 flex items-center justify-center">
             <span className="material-symbols-outlined text-[20px]">smart_toy</span>

@@ -83,7 +83,7 @@ export default function LoginPage() {
       />
 
       {/* ── OVERLAY degradado oscuro sobre el video ── */}
-      <div className="absolute inset-0 z-10 bg-gradient-to-br from-black/70 via-sky-950/60 to-black/80" />
+      <div className="absolute inset-0 z-10 bg-gradient-to-br from-black/80 via-sky-950/75 to-black/85" />
 
       {/* ── PARTÍCULAS decorativas (anillos animados) ── */}
       <div className="absolute inset-0 z-10 pointer-events-none">
@@ -93,12 +93,12 @@ export default function LoginPage() {
 
       {/* ── TARJETA PRINCIPAL con glassmorphism + slide-up ── */}
       <div className="relative z-20 w-full max-w-4xl animate-slide-up">
-        <div className="backdrop-blur-xl bg-white/8 border border-white/15 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
+        <div className="backdrop-blur-xl bg-slate-900/75 border border-white/20 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
 
           {/* ══════════════════════════════════════════════════
               Panel Izquierdo: Identidad Corporativa AeroManager
           ══════════════════════════════════════════════════ */}
-          <div className="w-full md:w-5/12 p-6 md:p-8 flex flex-col justify-between border-b md:border-b-0 md:border-r border-white/10 bg-white/5">
+          <div className="w-full md:w-5/12 p-6 md:p-8 flex flex-col justify-between border-b md:border-b-0 md:border-r border-white/15 bg-slate-900/60">
             <div className="flex flex-col gap-5 animate-fade-in [animation-delay:0.2s]">
               <div className="flex items-center gap-3">
                 <img
@@ -120,7 +120,7 @@ export default function LoginPage() {
                 <p className="text-sm font-semibold text-white/90">
                   Plataforma Centralizada de Gestión Aeroportuaria
                 </p>
-                <p className="text-xs text-white/55 mt-1.5 leading-relaxed">
+                <p className="text-xs text-white/75 mt-1.5 leading-relaxed">
                   Sistema integral para administración de infraestructura aeroportuaria, flota aérea,
                   programación de vuelos, asignación de puertas de embarque y emisión de reservas en
                   mostrador.
@@ -171,11 +171,11 @@ export default function LoginPage() {
           {/* ══════════════════════════════════════════════════
               Panel Derecho: Formulario de Autenticación
           ══════════════════════════════════════════════════ */}
-          <div className="w-full md:w-7/12 p-6 md:p-8 flex flex-col justify-center bg-white/5">
+          <div className="w-full md:w-7/12 p-6 md:p-8 flex flex-col justify-center bg-slate-900/50">
             <div className="max-w-md w-full mx-auto flex flex-col animate-slide-up [animation-delay:0.15s]">
               <div className="mb-5">
                 <h2 className="text-2xl font-bold text-white tracking-tight">Acceso Operativo</h2>
-                <p className="text-xs text-white/50 mt-1">
+                <p className="text-xs text-white/70 mt-1">
                   Ingrese sus credenciales autorizadas para acceder a su consola asignada.
                 </p>
               </div>
@@ -188,10 +188,7 @@ export default function LoginPage() {
 
               <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
                 <div className="flex flex-col gap-1">
-                  <label
-                    htmlFor="email"
-                    className="text-[11px] uppercase text-white/60 font-semibold tracking-wider"
-                  >
+                  <label htmlFor="email" className="text-[11px] uppercase text-white/80 font-semibold tracking-wider">
                     Correo Corporativo
                   </label>
                   <div className="relative flex items-center">
@@ -205,16 +202,13 @@ export default function LoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="usuario@aeromanager.com"
-                      className="w-full h-10 pl-9 pr-3 rounded-lg border border-white/15 bg-white/8 text-white placeholder-white/30 text-sm outline-none focus:border-sky-400/60 focus:ring-1 focus:ring-sky-400/40 backdrop-blur-sm transition-colors"
+                      className="w-full h-10 pl-9 pr-3 rounded-lg border border-white/25 bg-slate-800/70 text-white placeholder-white/40 text-sm outline-none focus:border-sky-400/80 focus:ring-1 focus:ring-sky-400/50 backdrop-blur-sm transition-colors"
                     />
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label
-                    htmlFor="password"
-                    className="text-[11px] uppercase text-white/60 font-semibold tracking-wider"
-                  >
+                  <label htmlFor="password" className="text-[11px] uppercase text-white/80 font-semibold tracking-wider">
                     Contraseña
                   </label>
                   <div className="relative flex items-center">
@@ -228,7 +222,7 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••"
-                      className="w-full h-10 pl-9 pr-10 rounded-lg border border-white/15 bg-white/8 text-white placeholder-white/30 text-sm outline-none focus:border-sky-400/60 focus:ring-1 focus:ring-sky-400/40 backdrop-blur-sm transition-colors"
+                      className="w-full h-10 pl-9 pr-10 rounded-lg border border-white/25 bg-slate-800/70 text-white placeholder-white/40 text-sm outline-none focus:border-sky-400/80 focus:ring-1 focus:ring-sky-400/50 backdrop-blur-sm transition-colors"
                     />
                     <button
                       type="button"

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { RolDto, UsuarioDto, UsuarioRolDto } from '../../../types/models';
+import { notifyError, notifySuccess, notifyUndo, notifyWarning } from '../../../utils/notify';
 
 export default function RolesPermisosPage() {
   const [roles, setRoles] = useState<RolDto[]>([]);
@@ -41,12 +42,12 @@ export default function RolesPermisosPage() {
     (r) => r.nombre.trim().toLowerCase() !== 'superadmin'
   );
 
-  // Solo roles operativos asignables por un Administrador (Operador y Counter)
+  // Solo roles operativos activos asignables por un Administrador (Operador y Counter)
   const assignableRoles = roles.filter(
-    (r) => !r.nombre.toLowerCase().includes('admin')
+    (r) => r.activo && !r.nombre.toLowerCase().includes('admin')
   );
 
-  // Excluir cuentas SuperAdmin y Administrador del selector de asignación
+  // Excluir cuentas SuperAdmin, Administrador o inactivas del selector de asignación
   const adminOrSuperAdminRoleIds = new Set(
     roles
       .filter((r) => r.nombre.toLowerCase().includes('admin'))
@@ -57,7 +58,7 @@ export default function RolesPermisosPage() {
       .filter((a) => a.activo && adminOrSuperAdminRoleIds.has(a.rolId))
       .map((a) => a.usuarioId)
   );
-  const assignableUsers = usuarios.filter((u) => !privilegedUserIds.has(u.id));
+  const assignableUsers = usuarios.filter((u) => u.activo && !privilegedUserIds.has(u.id));
   const activeAssignedUserIds = new Set(
     asignaciones.filter((a) => a.activo).map((a) => a.usuarioId)
   );
@@ -83,6 +84,7 @@ export default function RolesPermisosPage() {
     setChangingUserMode(isChange);
     setUsuarioId(presetUsuarioId || unassignedUsers[0]?.id || 0);
     setRolId(assignableRoles[0]?.id || 0);
+    setErrorMsg(null);
     setShowAssignModal(true);
   };
 
@@ -106,11 +108,11 @@ export default function RolesPermisosPage() {
     e.preventDefault();
     setErrorMsg(null);
     if (!usuarioId) {
-      setErrorMsg('Seleccione un usuario operativo válido.');
+      notifyWarning('Usuario requerido', 'Seleccione un usuario operativo válido.');
       return;
     }
     if (!rolId) {
-      setErrorMsg('Seleccione un rol operativo válido.');
+      notifyWarning('Rol requerido', 'Seleccione un rol operativo válido.');
       return;
     }
     try {
@@ -128,32 +130,62 @@ export default function RolesPermisosPage() {
       } else {
         await axiosClient.post('/usuarioroles', { usuarioId, rolId });
       }
+      const targetUser = usuarios.find((u) => u.id === usuarioId);
+      const targetRole = roles.find((r) => r.id === rolId);
+      notifySuccess(
+        changingUserMode ? 'Rol actualizado' : 'Rol asignado',
+        `${targetUser?.nombreCompleto || 'Usuario'} ahora tiene el rol ${targetRole?.nombre || 'seleccionado'}.`
+      );
       setShowAssignModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al asignar rol a usuario.'));
+      notifyError('No se pudo asignar el rol', extractApiError(err, 'Error al asignar rol a usuario.'));
     }
   };
 
   const handleToggleOperationalRole = async (item: UsuarioRolDto, roleName: string) => {
     if (roleName.toLowerCase().includes('admin')) {
-      setErrorMsg('Solo un SuperAdmin puede modificar o revocar el rol Administrador.');
+      notifyWarning('Acción restringida', 'Solo un SuperAdmin puede modificar o revocar el rol Administrador.');
       return;
     }
     setErrorMsg(null);
+    const nextActivo = !item.activo;
     try {
-      if (!item.activo) {
+      if (nextActivo) {
         await revokeOtherActiveRoles(item.usuarioId, item.id);
       }
       await axiosClient.put(`/usuarioroles/${item.id}`, {
         id: item.id,
         usuarioId: item.usuarioId,
         rolId: item.rolId,
-        activo: !item.activo
+        activo: nextActivo
       });
       await loadData();
+      const targetUser = usuarios.find((u) => u.id === item.usuarioId);
+      if (!nextActivo) {
+        notifyUndo(
+          'Rol revocado',
+          `Se retiró el rol ${roleName} a ${targetUser?.nombreCompleto || 'el usuario'}.`,
+          async () => {
+            await revokeOtherActiveRoles(item.usuarioId, item.id);
+            await axiosClient.put(`/usuarioroles/${item.id}`, {
+              id: item.id,
+              usuarioId: item.usuarioId,
+              rolId: item.rolId,
+              activo: true
+            });
+            await loadData();
+            notifySuccess('Rol restaurado', `${targetUser?.nombreCompleto || 'Usuario'} recuperó el rol ${roleName}.`);
+          }
+        );
+      } else {
+        notifySuccess('Rol reactivado', `Se restauró el rol ${roleName}.`);
+      }
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'No se pudo actualizar la asignación del rol operativo.'));
+      notifyError(
+        'Error al actualizar asignación',
+        extractApiError(err, 'No se pudo actualizar la asignación del rol operativo.')
+      );
     }
   };
 
@@ -178,12 +210,6 @@ export default function RolesPermisosPage() {
           <span>Asignar Rol Operativo</span>
         </button>
       </div>
-
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-          {errorMsg}
-        </div>
-      )}
 
       {/* Tarjetas de Roles visibles para Administrador */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

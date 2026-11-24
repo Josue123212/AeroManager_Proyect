@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { ModeloAvionDto } from '../../../types/models';
+import { notifyError, notifySuccess, notifyUndo } from '../../../utils/notify';
 
 export default function ModelosAvionPage() {
   const [modelos, setModelos] = useState<ModeloAvionDto[]>([]);
@@ -38,6 +39,7 @@ export default function ModelosAvionPage() {
     setCapacidadTeorica(180);
     setAutonomiaKm(6300);
     setActivo(true);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -48,6 +50,7 @@ export default function ModelosAvionPage() {
     setCapacidadTeorica(item.capacidadTeorica);
     setAutonomiaKm(item.autonomiaKm);
     setActivo(item.activo);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -64,6 +67,7 @@ export default function ModelosAvionPage() {
           autonomiaKm,
           activo
         });
+        notifySuccess('Modelo actualizado', `${fabricante} ${nombreModelo} fue guardado.`);
       } else {
         await axiosClient.post('/modelosavion', {
           fabricante,
@@ -71,16 +75,18 @@ export default function ModelosAvionPage() {
           capacidadTeorica,
           autonomiaKm
         });
+        notifySuccess('Modelo registrado', `${fabricante} ${nombreModelo} fue añadido.`);
       }
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al guardar modelo de avión.'));
+      notifyError('No se pudo guardar el modelo', extractApiError(err, 'Error al guardar modelo de avión.'));
     }
   };
 
   const handleToggleActivo = async (item: ModeloAvionDto) => {
     setErrorMsg(null);
+    const nextActivo = !item.activo;
     try {
       await axiosClient.put(`/modelosavion/${item.id}`, {
         id: item.id,
@@ -88,11 +94,31 @@ export default function ModelosAvionPage() {
         nombreModelo: item.nombreModelo,
         capacidadTeorica: item.capacidadTeorica,
         autonomiaKm: item.autonomiaKm,
-        activo: !item.activo
+        activo: nextActivo
       });
       await loadData();
+      if (!nextActivo) {
+        notifyUndo(
+          'Modelo desactivado',
+          `${item.fabricante} ${item.nombreModelo} pasó a inactivo.`,
+          async () => {
+            await axiosClient.put(`/modelosavion/${item.id}`, {
+              id: item.id,
+              fabricante: item.fabricante,
+              nombreModelo: item.nombreModelo,
+              capacidadTeorica: item.capacidadTeorica,
+              autonomiaKm: item.autonomiaKm,
+              activo: true
+            });
+            await loadData();
+            notifySuccess('Modelo reactivado', `${item.fabricante} ${item.nombreModelo} está activo.`);
+          }
+        );
+      } else {
+        notifySuccess('Modelo reactivado', `${item.fabricante} ${item.nombreModelo} está activo.`);
+      }
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al actualizar estado del modelo de avión.'));
+      notifyError('Error al actualizar estado', extractApiError(err, 'Error al actualizar estado del modelo de avión.'));
     }
   };
 
@@ -117,12 +143,6 @@ export default function ModelosAvionPage() {
           <span>Registrar Modelo de Aeronave</span>
         </button>
       </div>
-
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-          {errorMsg}
-        </div>
-      )}
 
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -215,6 +235,7 @@ export default function ModelosAvionPage() {
                 <input
                   type="text"
                   required
+                  maxLength={100}
                   value={fabricante}
                   onChange={(e) => setFabricante(e.target.value)}
                   placeholder="Airbus / Boeing / Embraer"
@@ -228,6 +249,7 @@ export default function ModelosAvionPage() {
                 <input
                   type="text"
                   required
+                  maxLength={100}
                   value={nombreModelo}
                   onChange={(e) => setNombreModelo(e.target.value)}
                   placeholder="A320neo"

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../api/axiosClient';
 import { RolDto, UsuarioDto, UsuarioRolDto } from '../../types/models';
+import { notifyError, notifySuccess, notifyUndo, notifyWarning } from '../../utils/notify';
 
 export default function SuperAdminUsuariosPage() {
   const [usuarios, setUsuarios] = useState<UsuarioDto[]>([]);
@@ -72,6 +73,7 @@ export default function SuperAdminUsuariosPage() {
     setEmail('');
     setPassword('');
     setEstadoAcceso('Activo');
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -81,6 +83,7 @@ export default function SuperAdminUsuariosPage() {
     setEmail(item.email);
     setPassword('');
     setEstadoAcceso(item.estadoAcceso || (item.activo ? 'Activo' : 'Suspendido'));
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -89,7 +92,7 @@ export default function SuperAdminUsuariosPage() {
     setErrorMsg(null);
     const derivedActivo = estadoAcceso === 'Activo';
     if (editing && (isUserSelf(editing) || isUserSuperAdmin(editing.id)) && !derivedActivo) {
-      setErrorMsg('No puedes suspender o bloquear una cuenta SuperAdmin.');
+      notifyWarning('Cuenta protegida', 'No puedes suspender o bloquear una cuenta SuperAdmin.');
       return;
     }
 
@@ -103,6 +106,12 @@ export default function SuperAdminUsuariosPage() {
           activo: derivedActivo,
           ...(password.trim() ? { password: password.trim() } : {})
         });
+        notifySuccess(
+          'Cuenta actualizada',
+          password.trim()
+            ? `Datos y contraseña actualizados para ${nombreCompleto}.`
+            : `Cuenta de ${nombreCompleto} guardada.`
+        );
       } else {
         await axiosClient.post('/usuarios', {
           nombreCompleto,
@@ -110,17 +119,18 @@ export default function SuperAdminUsuariosPage() {
           password,
           estadoAcceso
         });
+        notifySuccess('Cuenta registrada', `${nombreCompleto} (${email}) fue dado de alta.`);
       }
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al guardar cuenta de usuario.'));
+      notifyError('No se pudo guardar la cuenta', extractApiError(err, 'Error al guardar cuenta de usuario.'));
     }
   };
 
   const toggleStatus = async (item: UsuarioDto) => {
     if (isUserSelf(item) || isUserSuperAdmin(item.id)) {
-      setErrorMsg('No puedes suspender o desactivar una cuenta SuperAdmin.');
+      notifyWarning('Cuenta protegida', 'No puedes suspender o desactivar una cuenta SuperAdmin.');
       return;
     }
     setErrorMsg(null);
@@ -134,8 +144,23 @@ export default function SuperAdminUsuariosPage() {
         activo: nextActivo
       });
       await loadData();
+      if (!nextActivo) {
+        notifyUndo('Cuenta suspendida', `Se suspendió el acceso de ${item.nombreCompleto}.`, async () => {
+          await axiosClient.put(`/usuarios/${item.id}`, {
+            id: item.id,
+            nombreCompleto: item.nombreCompleto,
+            email: item.email,
+            estadoAcceso: 'Activo',
+            activo: true
+          });
+          await loadData();
+          notifySuccess('Cuenta reactivada', `El acceso de ${item.nombreCompleto} fue restaurado.`);
+        });
+      } else {
+        notifySuccess('Cuenta reactivada', `El acceso de ${item.nombreCompleto} está activo.`);
+      }
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'No se pudo actualizar el estado de la cuenta.'));
+      notifyError('Error al actualizar estado', extractApiError(err, 'No se pudo actualizar el estado de la cuenta.'));
     }
   };
 
@@ -160,12 +185,6 @@ export default function SuperAdminUsuariosPage() {
           <span>Registrar Cuenta</span>
         </button>
       </div>
-
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-          {errorMsg}
-        </div>
-      )}
 
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -284,6 +303,7 @@ export default function SuperAdminUsuariosPage() {
                 <input
                   type="text"
                   required
+                  maxLength={150}
                   value={nombreCompleto}
                   onChange={(e) => setNombreCompleto(e.target.value)}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs outline-none focus:border-indigo-600"
@@ -296,6 +316,7 @@ export default function SuperAdminUsuariosPage() {
                 <input
                   type="email"
                   required
+                  maxLength={150}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs outline-none focus:border-indigo-600"

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { TipoDocumentoDto } from '../../../types/models';
+import { notifyError, notifySuccess, notifyUndo } from '../../../utils/notify';
 
 export default function TiposDocumentoPage() {
   const [tipos, setTipos] = useState<TipoDocumentoDto[]>([]);
@@ -36,6 +37,7 @@ export default function TiposDocumentoPage() {
     setNombre('');
     setLongitudMaxima(8);
     setActivo(true);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -45,6 +47,7 @@ export default function TiposDocumentoPage() {
     setNombre(item.nombre);
     setLongitudMaxima(item.longitudMaxima);
     setActivo(item.activo);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -60,29 +63,53 @@ export default function TiposDocumentoPage() {
           longitudMaxima,
           activo
         });
+        notifySuccess('Documento actualizado', `${codigo} — ${nombre} fue guardado.`);
       } else {
         await axiosClient.post('/tiposdocumento', { codigo, nombre, longitudMaxima });
+        notifySuccess('Documento registrado', `${codigo} — ${nombre} fue añadido.`);
       }
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al guardar tipo de documento.'));
+      notifyError(
+        'No se pudo guardar el tipo de documento',
+        extractApiError(err, 'Error al guardar tipo de documento.')
+      );
     }
   };
 
   const handleToggleActivo = async (item: TipoDocumentoDto) => {
     setErrorMsg(null);
+    const nextActivo = !item.activo;
     try {
       await axiosClient.put(`/tiposdocumento/${item.id}`, {
         id: item.id,
         codigo: item.codigo,
         nombre: item.nombre,
         longitudMaxima: item.longitudMaxima,
-        activo: !item.activo
+        activo: nextActivo
       });
       await loadData();
+      if (!nextActivo) {
+        notifyUndo('Tipo de documento desactivado', `${item.codigo} pasó a inactivo.`, async () => {
+          await axiosClient.put(`/tiposdocumento/${item.id}`, {
+            id: item.id,
+            codigo: item.codigo,
+            nombre: item.nombre,
+            longitudMaxima: item.longitudMaxima,
+            activo: true
+          });
+          await loadData();
+          notifySuccess('Tipo de documento reactivado', `${item.codigo} está activo.`);
+        });
+      } else {
+        notifySuccess('Tipo de documento reactivado', `${item.codigo} está activo.`);
+      }
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al actualizar estado del tipo de documento.'));
+      notifyError(
+        'Error al actualizar estado',
+        extractApiError(err, 'Error al actualizar estado del tipo de documento.')
+      );
     }
   };
 
@@ -107,12 +134,6 @@ export default function TiposDocumentoPage() {
           <span>Registrar Tipo de Documento</span>
         </button>
       </div>
-
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-          {errorMsg}
-        </div>
-      )}
 
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -219,6 +240,7 @@ export default function TiposDocumentoPage() {
                 <input
                   type="text"
                   required
+                  maxLength={50}
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   placeholder="Documento Nacional de Identidad"

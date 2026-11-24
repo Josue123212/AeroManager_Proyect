@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { RolDto, UsuarioDto, UsuarioRolDto } from '../../../types/models';
+import { notifyError, notifySuccess, notifyUndo, notifyWarning } from '../../../utils/notify';
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<UsuarioDto[]>([]);
@@ -60,12 +61,16 @@ export default function UsuariosPage() {
     setEmail('');
     setPassword('');
     setEstadoAcceso('Activo');
+    setErrorMsg(null);
     setShowModal(true);
   };
 
   const openEdit = (item: UsuarioDto) => {
     if (isAdminUser(item.id)) {
-      setErrorMsg('Las cuentas con rol Administrador solo pueden ser modificadas por un SuperAdmin.');
+      notifyWarning(
+        'Cuenta protegida',
+        'Las cuentas con rol Administrador solo pueden ser modificadas por un SuperAdmin.'
+      );
       return;
     }
     setEditing(item);
@@ -73,6 +78,7 @@ export default function UsuariosPage() {
     setEmail(item.email);
     setPassword('');
     setEstadoAcceso(item.estadoAcceso || (item.activo ? 'Activo' : 'Suspendido'));
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -83,7 +89,10 @@ export default function UsuariosPage() {
     try {
       if (editing) {
         if (isAdminUser(editing.id)) {
-          setErrorMsg('Un Administrador solo puede modificar cuentas operativas (Operador o Counter).');
+          notifyWarning(
+            'Operación restringida',
+            'Un Administrador solo puede modificar cuentas operativas (Operador o Counter).'
+          );
           return;
         }
         await axiosClient.put(`/usuarios/${editing.id}`, {
@@ -94,6 +103,12 @@ export default function UsuariosPage() {
           activo: derivedActivo,
           ...(password.trim() ? { password: password.trim() } : {})
         });
+        notifySuccess(
+          'Usuario actualizado',
+          password.trim()
+            ? `Datos y contraseña actualizados para ${nombreCompleto}.`
+            : `Cuenta de ${nombreCompleto} actualizada.`
+        );
       } else {
         await axiosClient.post('/usuarios', {
           nombreCompleto,
@@ -101,18 +116,22 @@ export default function UsuariosPage() {
           password,
           estadoAcceso
         });
+        notifySuccess('Usuario creado', `${nombreCompleto} (${email}) fue registrado.`);
       }
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al guardar usuario.'));
+      notifyError('No se pudo guardar el usuario', extractApiError(err, 'Error al guardar usuario.'));
     }
   };
 
   const handleToggleActivo = async (item: UsuarioDto) => {
     setErrorMsg(null);
     if (isAdminUser(item.id)) {
-      setErrorMsg('Las cuentas con rol Administrador solo pueden ser modificadas por un SuperAdmin.');
+      notifyWarning(
+        'Cuenta protegida',
+        'Las cuentas con rol Administrador solo pueden ser modificadas por un SuperAdmin.'
+      );
       return;
     }
     const nextActivo = !item.activo;
@@ -125,8 +144,23 @@ export default function UsuariosPage() {
         activo: nextActivo
       });
       await loadData();
+      if (!nextActivo) {
+        notifyUndo('Cuenta suspendida', `Se bloqueó el acceso de ${item.nombreCompleto}.`, async () => {
+          await axiosClient.put(`/usuarios/${item.id}`, {
+            id: item.id,
+            nombreCompleto: item.nombreCompleto,
+            email: item.email,
+            estadoAcceso: 'Activo',
+            activo: true
+          });
+          await loadData();
+          notifySuccess('Cuenta reactivada', `El acceso de ${item.nombreCompleto} fue restaurado.`);
+        });
+      } else {
+        notifySuccess('Cuenta reactivada', `El acceso de ${item.nombreCompleto} está activo.`);
+      }
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al actualizar estado del usuario.'));
+      notifyError('Error al actualizar estado', extractApiError(err, 'Error al actualizar estado del usuario.'));
     }
   };
 
@@ -151,12 +185,6 @@ export default function UsuariosPage() {
           <span>Registrar Usuario</span>
         </button>
       </div>
-
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-          {errorMsg}
-        </div>
-      )}
 
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -272,6 +300,7 @@ export default function UsuariosPage() {
                 <input
                   type="text"
                   required
+                  maxLength={150}
                   value={nombreCompleto}
                   onChange={(e) => setNombreCompleto(e.target.value)}
                   placeholder="Ej. Carlos Mendoza"
@@ -285,6 +314,7 @@ export default function UsuariosPage() {
                 <input
                   type="email"
                   required
+                  maxLength={150}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="operador@aeromanager.com"

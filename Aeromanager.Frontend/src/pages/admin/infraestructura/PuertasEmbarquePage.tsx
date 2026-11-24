@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { PuertaEmbarqueDto, TerminalDto } from '../../../types/models';
+import { notifyError, notifySuccess, notifyUndo } from '../../../utils/notify';
 
 export default function PuertasEmbarquePage() {
   const [puertas, setPuertas] = useState<PuertaEmbarqueDto[]>([]);
@@ -39,8 +40,9 @@ export default function PuertasEmbarquePage() {
     setEditing(null);
     setCodigoGate('');
     setEstado('Disponible');
-    setTerminalId(terminales[0]?.id || 0);
+    setTerminalId(terminales.find((t) => t.activo)?.id || 0);
     setActivo(true);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -50,6 +52,7 @@ export default function PuertasEmbarquePage() {
     setEstado(item.estado);
     setTerminalId(item.terminalId);
     setActivo(item.activo);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -65,29 +68,47 @@ export default function PuertasEmbarquePage() {
           terminalId,
           activo
         });
+        notifySuccess('Gate actualizado', `La puerta ${codigoGate} fue guardada.`);
       } else {
         await axiosClient.post('/puertasembarque', { codigoGate, estado, terminalId });
+        notifySuccess('Gate registrado', `La puerta ${codigoGate} fue añadida.`);
       }
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al guardar puerta de embarque.'));
+      notifyError('No se pudo guardar la puerta', extractApiError(err, 'Error al guardar puerta de embarque.'));
     }
   };
 
   const handleToggleActivo = async (item: PuertaEmbarqueDto) => {
     setErrorMsg(null);
+    const nextActivo = !item.activo;
     try {
       await axiosClient.put(`/puertasembarque/${item.id}`, {
         id: item.id,
         codigoGate: item.codigoGate,
         estado: item.estado,
         terminalId: item.terminalId,
-        activo: !item.activo
+        activo: nextActivo
       });
       await loadData();
+      if (!nextActivo) {
+        notifyUndo('Gate desactivado', `La puerta ${item.codigoGate} pasó a inactiva.`, async () => {
+          await axiosClient.put(`/puertasembarque/${item.id}`, {
+            id: item.id,
+            codigoGate: item.codigoGate,
+            estado: item.estado,
+            terminalId: item.terminalId,
+            activo: true
+          });
+          await loadData();
+          notifySuccess('Gate reactivado', `La puerta ${item.codigoGate} está activa.`);
+        });
+      } else {
+        notifySuccess('Gate reactivado', `La puerta ${item.codigoGate} está activa.`);
+      }
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al actualizar estado de la puerta de embarque.'));
+      notifyError('Error al actualizar estado', extractApiError(err, 'Error al actualizar estado de la puerta de embarque.'));
     }
   };
 
@@ -123,12 +144,6 @@ export default function PuertasEmbarquePage() {
           <span>Registrar Puerta de Embarque</span>
         </button>
       </div>
-
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-          {errorMsg}
-        </div>
-      )}
 
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -220,11 +235,13 @@ export default function PuertasEmbarquePage() {
                   onChange={(e) => setTerminalId(Number(e.target.value))}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                 >
-                  {terminales.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.codigo} — {t.nombre}
-                    </option>
-                  ))}
+                  {terminales
+                    .filter((t) => t.activo || (editing && t.id === editing.terminalId))
+                    .map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.codigo} — {t.nombre}
+                      </option>
+                    ))}
                 </select>
               </div>
               <div>
@@ -234,6 +251,7 @@ export default function PuertasEmbarquePage() {
                 <input
                   type="text"
                   required
+                  maxLength={10}
                   value={codigoGate}
                   onChange={(e) => setCodigoGate(e.target.value.toUpperCase())}
                   placeholder="A12"

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { AsientoDto, AvionDto, ClaseAsientoDto } from '../../../types/models';
+import { notifyError, notifySuccess, notifyUndo } from '../../../utils/notify';
 
 export default function AsientosPage() {
   const [asientos, setAsientos] = useState<AsientoDto[]>([]);
@@ -48,11 +49,12 @@ export default function AsientosPage() {
 
   const openCreate = () => {
     setEditing(null);
-    setAvionId(aviones[0]?.id || 0);
-    setClaseAsientoId(clases[0]?.id || 0);
+    setAvionId(aviones.find((a) => a.activo)?.id || 0);
+    setClaseAsientoId(clases.find((c) => c.activo)?.id || 0);
     setFila(1);
     setLetra('A');
     setActivo(true);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -63,6 +65,7 @@ export default function AsientosPage() {
     setFila(item.fila);
     setLetra(item.letra);
     setActivo(item.activo);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -79,6 +82,7 @@ export default function AsientosPage() {
           claseAsientoId,
           activo
         });
+        notifySuccess('Asiento actualizado', `La butaca ${fila}${letra.toUpperCase()} fue guardada.`);
       } else {
         await axiosClient.post('/asientos', {
           fila,
@@ -86,16 +90,18 @@ export default function AsientosPage() {
           avionId,
           claseAsientoId
         });
+        notifySuccess('Asiento registrado', `La butaca ${fila}${letra.toUpperCase()} fue añadida.`);
       }
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al guardar asiento.'));
+      notifyError('No se pudo guardar el asiento', extractApiError(err, 'Error al guardar asiento.'));
     }
   };
 
   const handleToggleActivo = async (item: AsientoDto) => {
     setErrorMsg(null);
+    const nextActivo = !item.activo;
     try {
       await axiosClient.put(`/asientos/${item.id}`, {
         id: item.id,
@@ -103,11 +109,27 @@ export default function AsientosPage() {
         letra: item.letra.toUpperCase(),
         avionId: item.avionId,
         claseAsientoId: item.claseAsientoId,
-        activo: !item.activo
+        activo: nextActivo
       });
       await loadData();
+      if (!nextActivo) {
+        notifyUndo('Asiento desactivado', `La butaca ${item.fila}${item.letra} pasó a inactiva.`, async () => {
+          await axiosClient.put(`/asientos/${item.id}`, {
+            id: item.id,
+            fila: item.fila,
+            letra: item.letra.toUpperCase(),
+            avionId: item.avionId,
+            claseAsientoId: item.claseAsientoId,
+            activo: true
+          });
+          await loadData();
+          notifySuccess('Asiento reactivado', `La butaca ${item.fila}${item.letra} está activa.`);
+        });
+      } else {
+        notifySuccess('Asiento reactivado', `La butaca ${item.fila}${item.letra} está activa.`);
+      }
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al actualizar estado del asiento.'));
+      notifyError('Error al actualizar estado', extractApiError(err, 'Error al actualizar estado del asiento.'));
     }
   };
 
@@ -132,12 +154,6 @@ export default function AsientosPage() {
           <span>Registrar Asiento Físico</span>
         </button>
       </div>
-
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-          {errorMsg}
-        </div>
-      )}
 
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -251,11 +267,13 @@ export default function AsientosPage() {
                   onChange={(e) => setAvionId(Number(e.target.value))}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                 >
-                  {aviones.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.matricula} ({a.estadoOperativo})
-                    </option>
-                  ))}
+                  {aviones
+                    .filter((a) => a.activo || (editing && a.id === editing.avionId))
+                    .map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.matricula} ({a.estadoOperativo})
+                      </option>
+                    ))}
                 </select>
               </div>
               <div>
@@ -268,11 +286,13 @@ export default function AsientosPage() {
                   onChange={(e) => setClaseAsientoId(Number(e.target.value))}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                 >
-                  {clases.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre} (x{c.multiplicadorTarifa})
-                    </option>
-                  ))}
+                  {clases
+                    .filter((c) => c.activo || (editing && c.id === editing.claseAsientoId))
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nombre} (x{c.multiplicadorTarifa})
+                      </option>
+                    ))}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { AeropuertoDto, TerminalDto } from '../../../types/models';
+import { notifyError, notifySuccess, notifyUndo } from '../../../utils/notify';
 
 export default function TerminalesPage() {
   const [terminales, setTerminales] = useState<TerminalDto[]>([]);
@@ -39,8 +40,9 @@ export default function TerminalesPage() {
     setEditing(null);
     setCodigo('');
     setNombre('');
-    setAeropuertoId(aeropuertos[0]?.id || 0);
+    setAeropuertoId(aeropuertos.find((a) => a.activo)?.id || 0);
     setActivo(true);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -50,6 +52,7 @@ export default function TerminalesPage() {
     setNombre(item.nombre);
     setAeropuertoId(item.aeropuertoId);
     setActivo(item.activo);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -65,29 +68,47 @@ export default function TerminalesPage() {
           aeropuertoId,
           activo
         });
+        notifySuccess('Terminal actualizada', `${codigo} — ${nombre} fue guardada.`);
       } else {
         await axiosClient.post('/terminales', { codigo, nombre, aeropuertoId });
+        notifySuccess('Terminal registrada', `${codigo} — ${nombre} fue añadida.`);
       }
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al guardar terminal.'));
+      notifyError('No se pudo guardar la terminal', extractApiError(err, 'Error al guardar terminal.'));
     }
   };
 
   const handleToggleActivo = async (item: TerminalDto) => {
     setErrorMsg(null);
+    const nextActivo = !item.activo;
     try {
       await axiosClient.put(`/terminales/${item.id}`, {
         id: item.id,
         codigo: item.codigo,
         nombre: item.nombre,
         aeropuertoId: item.aeropuertoId,
-        activo: !item.activo
+        activo: nextActivo
       });
       await loadData();
+      if (!nextActivo) {
+        notifyUndo('Terminal desactivada', `${item.codigo} — ${item.nombre} pasó a inactiva.`, async () => {
+          await axiosClient.put(`/terminales/${item.id}`, {
+            id: item.id,
+            codigo: item.codigo,
+            nombre: item.nombre,
+            aeropuertoId: item.aeropuertoId,
+            activo: true
+          });
+          await loadData();
+          notifySuccess('Terminal reactivada', `${item.codigo} está activa nuevamente.`);
+        });
+      } else {
+        notifySuccess('Terminal reactivada', `${item.codigo} está activa nuevamente.`);
+      }
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al actualizar estado de la terminal.'));
+      notifyError('Error al actualizar estado', extractApiError(err, 'Error al actualizar estado de la terminal.'));
     }
   };
 
@@ -117,12 +138,6 @@ export default function TerminalesPage() {
           <span>Registrar Nueva Terminal</span>
         </button>
       </div>
-
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-          {errorMsg}
-        </div>
-      )}
 
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -218,20 +233,23 @@ export default function TerminalesPage() {
                   onChange={(e) => setAeropuertoId(Number(e.target.value))}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                 >
-                  {aeropuertos.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.codigoIata} — {a.nombre}
-                    </option>
-                  ))}
+                  {aeropuertos
+                    .filter((a) => a.activo || (editing && a.id === editing.aeropuertoId))
+                    .map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.codigoIata} — {a.nombre}
+                      </option>
+                    ))}
                 </select>
               </div>
               <div>
                 <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
-                  Código (Ej. T1, T2)
+                  Código (Máx. 10 car. — Ej. T1, T2)
                 </label>
                 <input
                   type="text"
                   required
+                  maxLength={10}
                   value={codigo}
                   onChange={(e) => setCodigo(e.target.value.toUpperCase())}
                   placeholder="T1"
@@ -240,11 +258,12 @@ export default function TerminalesPage() {
               </div>
               <div>
                 <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
-                  Nombre de la Terminal
+                  Nombre de la Terminal (Máx. 50 car.)
                 </label>
                 <input
                   type="text"
                   required
+                  maxLength={50}
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   placeholder="Terminal Nacional"

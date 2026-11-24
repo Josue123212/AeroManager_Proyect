@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { AeropuertoDto, CiudadDto } from '../../../types/models';
+import { notifyError, notifySuccess, notifyUndo } from '../../../utils/notify';
 
 export default function AeropuertosPage() {
   const [aeropuertos, setAeropuertos] = useState<AeropuertoDto[]>([]);
@@ -41,9 +42,10 @@ export default function AeropuertosPage() {
     setEditing(null);
     setNombre('');
     setCodigoIata('');
-    setCiudadId(ciudades[0]?.id || 0);
+    setCiudadId(ciudades.find((c) => c.activo)?.id || 0);
     setDireccion('');
     setActivo(true);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -54,6 +56,7 @@ export default function AeropuertosPage() {
     setCiudadId(item.ciudadId);
     setDireccion(item.direccion || '');
     setActivo(item.activo);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -71,6 +74,7 @@ export default function AeropuertosPage() {
           direccion,
           activo
         });
+        notifySuccess('Aeropuerto actualizado', `${iata} — ${nombre} fue guardado.`);
       } else {
         await axiosClient.post('/aeropuertos', {
           nombre,
@@ -78,16 +82,18 @@ export default function AeropuertosPage() {
           ciudadId,
           direccion
         });
+        notifySuccess('Aeropuerto registrado', `${iata} — ${nombre} fue añadido.`);
       }
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al guardar aeropuerto.'));
+      notifyError('No se pudo guardar el aeropuerto', extractApiError(err, 'Error al guardar aeropuerto.'));
     }
   };
 
   const handleToggleActivo = async (item: AeropuertoDto) => {
     setErrorMsg(null);
+    const nextActivo = !item.activo;
     try {
       await axiosClient.put(`/aeropuertos/${item.id}`, {
         id: item.id,
@@ -95,11 +101,31 @@ export default function AeropuertosPage() {
         codigoIata: item.codigoIata,
         ciudadId: item.ciudadId,
         direccion: item.direccion || '',
-        activo: !item.activo
+        activo: nextActivo
       });
       await loadData();
+      if (!nextActivo) {
+        notifyUndo(
+          'Aeropuerto desactivado',
+          `${item.codigoIata} — ${item.nombre} pasó a inactivo.`,
+          async () => {
+            await axiosClient.put(`/aeropuertos/${item.id}`, {
+              id: item.id,
+              nombre: item.nombre,
+              codigoIata: item.codigoIata,
+              ciudadId: item.ciudadId,
+              direccion: item.direccion || '',
+              activo: true
+            });
+            await loadData();
+            notifySuccess('Aeropuerto reactivado', `${item.codigoIata} volvió a estar operativo.`);
+          }
+        );
+      } else {
+        notifySuccess('Aeropuerto reactivado', `${item.codigoIata} está operativo.`);
+      }
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al actualizar estado del aeropuerto.'));
+      notifyError('Error al actualizar estado', extractApiError(err, 'Error al actualizar estado del aeropuerto.'));
     }
   };
 
@@ -133,12 +159,6 @@ export default function AeropuertosPage() {
           <span>Registrar Sede Aeroportuaria</span>
         </button>
       </div>
-
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-          {errorMsg}
-        </div>
-      )}
 
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <div className="p-4 bg-[#F4F4F5] border-b border-zinc-200 flex items-center justify-between">
@@ -244,6 +264,7 @@ export default function AeropuertosPage() {
                 <input
                   type="text"
                   required
+                  maxLength={150}
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   placeholder="Aeropuerto Internacional Jorge Chávez"
@@ -253,11 +274,12 @@ export default function AeropuertosPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
-                    Código IATA (3 Letras)
+                    Código IATA (3 Letras Exactas)
                   </label>
                   <input
                     type="text"
                     required
+                    minLength={3}
                     maxLength={3}
                     value={codigoIata}
                     onChange={(e) => setCodigoIata(e.target.value.toUpperCase())}
@@ -275,11 +297,13 @@ export default function AeropuertosPage() {
                     onChange={(e) => setCiudadId(Number(e.target.value))}
                     className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                   >
-                    {ciudades.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nombre}
-                      </option>
-                    ))}
+                    {ciudades
+                      .filter((c) => c.activo || (editing && c.id === editing.ciudadId))
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.nombre}
+                        </option>
+                      ))}
                   </select>
                 </div>
               </div>
@@ -289,6 +313,7 @@ export default function AeropuertosPage() {
                 </label>
                 <input
                   type="text"
+                  maxLength={250}
                   value={direccion}
                   onChange={(e) => setDireccion(e.target.value)}
                   placeholder="Av. Elmer Faucett s/n, Callao"

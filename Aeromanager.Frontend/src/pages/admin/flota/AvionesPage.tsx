@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { AerolineaDto, AvionDto, ModeloAvionDto } from '../../../types/models';
+import { notifyError, notifySuccess, notifyUndo } from '../../../utils/notify';
 
 export default function AvionesPage() {
   const [aviones, setAviones] = useState<AvionDto[]>([]);
@@ -43,12 +44,13 @@ export default function AvionesPage() {
   const openCreate = () => {
     setEditing(null);
     setMatricula('');
-    const firstModel = modelos[0];
+    const firstModel = modelos.find((m) => m.activo);
     setCapacidadFisica(firstModel?.capacidadTeorica || 180);
-    setAerolineaId(aerolineas[0]?.id || 0);
+    setAerolineaId(aerolineas.find((a) => a.activo)?.id || 0);
     setModeloAvionId(firstModel?.id || 0);
     setEstadoOperativo('Operativo');
     setActivo(true);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -60,6 +62,7 @@ export default function AvionesPage() {
     setModeloAvionId(item.modeloAvionId);
     setEstadoOperativo(item.estadoOperativo);
     setActivo(item.activo);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -77,6 +80,7 @@ export default function AvionesPage() {
           modeloAvionId,
           activo
         });
+        notifySuccess('Aeronave actualizada', `La matrícula ${matricula} (${estadoOperativo}) fue guardada.`);
       } else {
         await axiosClient.post('/aviones', {
           matricula,
@@ -85,16 +89,18 @@ export default function AvionesPage() {
           aerolineaId,
           modeloAvionId
         });
+        notifySuccess('Aeronave registrada', `La matrícula ${matricula} fue incorporada a la flota.`);
       }
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al guardar aeronave.'));
+      notifyError('No se pudo guardar la aeronave', extractApiError(err, 'Error al guardar aeronave.'));
     }
   };
 
   const handleToggleActivo = async (item: AvionDto) => {
     setErrorMsg(null);
+    const nextActivo = !item.activo;
     try {
       await axiosClient.put(`/aviones/${item.id}`, {
         id: item.id,
@@ -103,11 +109,28 @@ export default function AvionesPage() {
         estadoOperativo: item.estadoOperativo,
         aerolineaId: item.aerolineaId,
         modeloAvionId: item.modeloAvionId,
-        activo: !item.activo
+        activo: nextActivo
       });
       await loadData();
+      if (!nextActivo) {
+        notifyUndo('Aeronave desactivada', `El avión ${item.matricula} pasó a inactivo.`, async () => {
+          await axiosClient.put(`/aviones/${item.id}`, {
+            id: item.id,
+            matricula: item.matricula,
+            capacidadFisica: item.capacidadFisica,
+            estadoOperativo: item.estadoOperativo,
+            aerolineaId: item.aerolineaId,
+            modeloAvionId: item.modeloAvionId,
+            activo: true
+          });
+          await loadData();
+          notifySuccess('Aeronave reactivada', `El avión ${item.matricula} está activo.`);
+        });
+      } else {
+        notifySuccess('Aeronave reactivada', `El avión ${item.matricula} está activo.`);
+      }
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al actualizar estado de la aeronave.'));
+      notifyError('Error al actualizar estado', extractApiError(err, 'Error al actualizar estado de la aeronave.'));
     }
   };
 
@@ -132,12 +155,6 @@ export default function AvionesPage() {
           <span>Registrar Aeronave</span>
         </button>
       </div>
-
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-          {errorMsg}
-        </div>
-      )}
 
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -236,11 +253,12 @@ export default function AvionesPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
-                    Matrícula Oficial
+                    Matrícula Oficial (Máx. 20 car.)
                   </label>
                   <input
                     type="text"
                     required
+                    maxLength={20}
                     value={matricula}
                     onChange={(e) => setMatricula(e.target.value.toUpperCase())}
                     placeholder="OB-2150-P"
@@ -271,11 +289,13 @@ export default function AvionesPage() {
                   onChange={(e) => setAerolineaId(Number(e.target.value))}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                 >
-                  {aerolineas.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.nombre} ({a.codigoIata})
-                    </option>
-                  ))}
+                  {aerolineas
+                    .filter((a) => a.activo || (editing && a.id === editing.aerolineaId))
+                    .map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.nombre} ({a.codigoIata})
+                      </option>
+                    ))}
                 </select>
               </div>
               <div>
@@ -293,11 +313,13 @@ export default function AvionesPage() {
                   }}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                 >
-                  {modelos.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.fabricante} {m.nombreModelo} ({m.capacidadTeorica} PAX)
-                    </option>
-                  ))}
+                  {modelos
+                    .filter((m) => m.activo || (editing && m.id === editing.modeloAvionId))
+                    .map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.fabricante} {m.nombreModelo} ({m.capacidadTeorica} PAX)
+                      </option>
+                    ))}
                 </select>
               </div>
               <div>

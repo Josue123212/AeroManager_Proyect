@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { ClaseAsientoDto } from '../../../types/models';
+import { notifyError, notifySuccess, notifyUndo } from '../../../utils/notify';
 
 export default function ClasesAsientoPage() {
   const [clases, setClases] = useState<ClaseAsientoDto[]>([]);
@@ -34,6 +35,7 @@ export default function ClasesAsientoPage() {
     setNombre('');
     setMultiplicadorTarifa(1.0);
     setActivo(true);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -42,6 +44,7 @@ export default function ClasesAsientoPage() {
     setNombre(item.nombre);
     setMultiplicadorTarifa(item.multiplicadorTarifa);
     setActivo(item.activo);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -56,28 +59,45 @@ export default function ClasesAsientoPage() {
           multiplicadorTarifa,
           activo
         });
+        notifySuccess('Clase actualizada', `${nombre} (x${multiplicadorTarifa.toFixed(2)}) fue guardada.`);
       } else {
         await axiosClient.post('/clasesasiento', { nombre, multiplicadorTarifa });
+        notifySuccess('Clase registrada', `${nombre} (x${multiplicadorTarifa.toFixed(2)}) fue añadida.`);
       }
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al guardar clase de asiento.'));
+      notifyError('No se pudo guardar la clase', extractApiError(err, 'Error al guardar clase de asiento.'));
     }
   };
 
   const handleToggleActivo = async (item: ClaseAsientoDto) => {
     setErrorMsg(null);
+    const nextActivo = !item.activo;
     try {
       await axiosClient.put(`/clasesasiento/${item.id}`, {
         id: item.id,
         nombre: item.nombre,
         multiplicadorTarifa: item.multiplicadorTarifa,
-        activo: !item.activo
+        activo: nextActivo
       });
       await loadData();
+      if (!nextActivo) {
+        notifyUndo('Clase desactivada', `${item.nombre} pasó a inactiva.`, async () => {
+          await axiosClient.put(`/clasesasiento/${item.id}`, {
+            id: item.id,
+            nombre: item.nombre,
+            multiplicadorTarifa: item.multiplicadorTarifa,
+            activo: true
+          });
+          await loadData();
+          notifySuccess('Clase reactivada', `${item.nombre} está activa nuevamente.`);
+        });
+      } else {
+        notifySuccess('Clase reactivada', `${item.nombre} está activa nuevamente.`);
+      }
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al actualizar estado de la clase de asiento.'));
+      notifyError('Error al actualizar estado', extractApiError(err, 'Error al actualizar estado de la clase de asiento.'));
     }
   };
 
@@ -102,12 +122,6 @@ export default function ClasesAsientoPage() {
           <span>Registrar Clase de Asiento</span>
         </button>
       </div>
-
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-          {errorMsg}
-        </div>
-      )}
 
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -200,6 +214,7 @@ export default function ClasesAsientoPage() {
                 <input
                   type="text"
                   required
+                  maxLength={50}
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   placeholder="Ejecutiva"

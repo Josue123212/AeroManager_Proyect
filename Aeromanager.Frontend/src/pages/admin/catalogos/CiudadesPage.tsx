@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { CiudadDto, PaisDto } from '../../../types/models';
+import { notifyError, notifySuccess, notifyUndo } from '../../../utils/notify';
 
 export default function CiudadesPage() {
   const [ciudades, setCiudades] = useState<CiudadDto[]>([]);
@@ -38,8 +39,9 @@ export default function CiudadesPage() {
   const openCreate = () => {
     setEditing(null);
     setNombre('');
-    setPaisId(paises[0]?.id || 0);
+    setPaisId(paises.find((p) => p.activo)?.id || 0);
     setActivo(true);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -48,6 +50,7 @@ export default function CiudadesPage() {
     setNombre(item.nombre);
     setPaisId(item.paisId);
     setActivo(item.activo);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -62,28 +65,45 @@ export default function CiudadesPage() {
           paisId,
           activo
         });
+        notifySuccess('Ciudad actualizada', `${nombre} se actualizó correctamente.`);
       } else {
         await axiosClient.post('/ciudades', { nombre, paisId });
+        notifySuccess('Ciudad registrada', `${nombre} fue añadida al catálogo.`);
       }
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al guardar ciudad.'));
+      notifyError('No se pudo guardar la ciudad', extractApiError(err, 'Error al guardar ciudad.'));
     }
   };
 
   const handleToggleActivo = async (item: CiudadDto) => {
     setErrorMsg(null);
+    const nextActivo = !item.activo;
     try {
       await axiosClient.put(`/ciudades/${item.id}`, {
         id: item.id,
         nombre: item.nombre,
         paisId: item.paisId,
-        activo: !item.activo
+        activo: nextActivo
       });
       await loadData();
+      if (!nextActivo) {
+        notifyUndo('Ciudad desactivada', `${item.nombre} fue marcada como inactiva.`, async () => {
+          await axiosClient.put(`/ciudades/${item.id}`, {
+            id: item.id,
+            nombre: item.nombre,
+            paisId: item.paisId,
+            activo: true
+          });
+          await loadData();
+          notifySuccess('Ciudad reactivada', `${item.nombre} está activa nuevamente.`);
+        });
+      } else {
+        notifySuccess('Ciudad reactivada', `${item.nombre} está activa nuevamente.`);
+      }
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al actualizar estado de la ciudad.'));
+      notifyError('Error al actualizar estado', extractApiError(err, 'Error al actualizar estado de la ciudad.'));
     }
   };
 
@@ -115,12 +135,6 @@ export default function CiudadesPage() {
           <span>Registrar Nueva Ciudad</span>
         </button>
       </div>
-
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-          {errorMsg}
-        </div>
-      )}
 
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <div className="p-4 bg-[#F4F4F5] border-b border-zinc-200 flex items-center justify-between">
@@ -216,6 +230,7 @@ export default function CiudadesPage() {
                 <input
                   type="text"
                   required
+                  maxLength={100}
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   placeholder="Ej. Cusco"
@@ -232,11 +247,13 @@ export default function CiudadesPage() {
                   onChange={(e) => setPaisId(Number(e.target.value))}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                 >
-                  {paises.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombre} ({p.codigoIso})
-                    </option>
-                  ))}
+                  {paises
+                    .filter((p) => p.activo || (editing && p.id === editing.paisId))
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nombre} ({p.codigoIso})
+                      </option>
+                    ))}
                 </select>
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t border-zinc-200">

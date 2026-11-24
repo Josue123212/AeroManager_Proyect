@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { AerolineaDto, PaisDto } from '../../../types/models';
+import { notifyError, notifySuccess, notifyUndo } from '../../../utils/notify';
 
 export default function AerolineasPage() {
   const [aerolineas, setAerolineas] = useState<AerolineaDto[]>([]);
@@ -39,8 +40,9 @@ export default function AerolineasPage() {
     setEditing(null);
     setNombre('');
     setCodigoIata('');
-    setPaisOrigenId(paises[0]?.id || 0);
+    setPaisOrigenId(paises.find((p) => p.activo)?.id || 0);
     setActivo(true);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -50,6 +52,7 @@ export default function AerolineasPage() {
     setCodigoIata(item.codigoIata);
     setPaisOrigenId(item.paisOrigenId);
     setActivo(item.activo);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -66,33 +69,51 @@ export default function AerolineasPage() {
           paisOrigenId,
           activo
         });
+        notifySuccess('Aerolínea actualizada', `${nombre} (${iata}) fue guardada.`);
       } else {
         await axiosClient.post('/aerolineas', {
           nombre,
           codigoIata: iata,
           paisOrigenId
         });
+        notifySuccess('Aerolínea registrada', `${nombre} (${iata}) fue añadida.`);
       }
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al guardar aerolínea.'));
+      notifyError('No se pudo guardar la aerolínea', extractApiError(err, 'Error al guardar aerolínea.'));
     }
   };
 
   const handleToggleActivo = async (item: AerolineaDto) => {
     setErrorMsg(null);
+    const nextActivo = !item.activo;
     try {
       await axiosClient.put(`/aerolineas/${item.id}`, {
         id: item.id,
         nombre: item.nombre,
         codigoIata: item.codigoIata,
         paisOrigenId: item.paisOrigenId,
-        activo: !item.activo
+        activo: nextActivo
       });
       await loadData();
+      if (!nextActivo) {
+        notifyUndo('Aerolínea desactivada', `${item.nombre} (${item.codigoIata}) pasó a inactiva.`, async () => {
+          await axiosClient.put(`/aerolineas/${item.id}`, {
+            id: item.id,
+            nombre: item.nombre,
+            codigoIata: item.codigoIata,
+            paisOrigenId: item.paisOrigenId,
+            activo: true
+          });
+          await loadData();
+          notifySuccess('Aerolínea reactivada', `${item.nombre} está activa nuevamente.`);
+        });
+      } else {
+        notifySuccess('Aerolínea reactivada', `${item.nombre} está activa nuevamente.`);
+      }
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al actualizar estado de la aerolínea.'));
+      notifyError('Error al actualizar estado', extractApiError(err, 'Error al actualizar estado de la aerolínea.'));
     }
   };
 
@@ -122,12 +143,6 @@ export default function AerolineasPage() {
           <span>Registrar Aerolínea</span>
         </button>
       </div>
-
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-          {errorMsg}
-        </div>
-      )}
 
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <table className="w-full text-left border-collapse">
@@ -218,6 +233,7 @@ export default function AerolineasPage() {
                 <input
                   type="text"
                   required
+                  maxLength={100}
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   placeholder="LATAM Airlines Perú"
@@ -226,11 +242,12 @@ export default function AerolineasPage() {
               </div>
               <div>
                 <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
-                  Código IATA (Máx. 3 Caracteres)
+                  Código IATA (2 o 3 Caracteres)
                 </label>
                 <input
                   type="text"
                   required
+                  minLength={2}
                   maxLength={3}
                   value={codigoIata}
                   onChange={(e) => setCodigoIata(e.target.value.toUpperCase())}
@@ -248,11 +265,13 @@ export default function AerolineasPage() {
                   onChange={(e) => setPaisOrigenId(Number(e.target.value))}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                 >
-                  {paises.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombre} ({p.codigoIso})
-                    </option>
-                  ))}
+                  {paises
+                    .filter((p) => p.activo || (editing && p.id === editing.paisOrigenId))
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nombre} ({p.codigoIso})
+                      </option>
+                    ))}
                 </select>
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t border-zinc-200">

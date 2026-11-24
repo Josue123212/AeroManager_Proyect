@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../../api/axiosClient';
 import { PaisDto } from '../../../types/models';
+import { notifyError, notifySuccess, notifyUndo } from '../../../utils/notify';
 
 export default function PaisesPage() {
   const [paises, setPaises] = useState<PaisDto[]>([]);
@@ -35,6 +36,7 @@ export default function PaisesPage() {
     setNombre('');
     setCodigoIso('');
     setActivo(true);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -43,6 +45,7 @@ export default function PaisesPage() {
     setNombre(item.nombre);
     setCodigoIso(item.codigoIso);
     setActivo(item.activo);
+    setErrorMsg(null);
     setShowModal(true);
   };
 
@@ -58,28 +61,45 @@ export default function PaisesPage() {
           codigoIso: iso,
           activo
         });
+        notifySuccess('País actualizado', `${nombre} (${iso}) se guardó correctamente.`);
       } else {
         await axiosClient.post('/paises', { nombre, codigoIso: iso });
+        notifySuccess('País registrado', `${nombre} (${iso}) fue añadido al catálogo.`);
       }
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al guardar país.'));
+      notifyError('No se pudo guardar el país', extractApiError(err, 'Error al guardar país.'));
     }
   };
 
   const handleToggleActivo = async (item: PaisDto) => {
     setErrorMsg(null);
+    const nextActivo = !item.activo;
     try {
       await axiosClient.put(`/paises/${item.id}`, {
         id: item.id,
         nombre: item.nombre,
         codigoIso: item.codigoIso,
-        activo: !item.activo
+        activo: nextActivo
       });
       await loadData();
+      if (!nextActivo) {
+        notifyUndo('País desactivado', `${item.nombre} (${item.codigoIso}) pasó a inactivo.`, async () => {
+          await axiosClient.put(`/paises/${item.id}`, {
+            id: item.id,
+            nombre: item.nombre,
+            codigoIso: item.codigoIso,
+            activo: true
+          });
+          await loadData();
+          notifySuccess('País reactivado', `${item.nombre} (${item.codigoIso}) está activo.`);
+        });
+      } else {
+        notifySuccess('País reactivado', `${item.nombre} (${item.codigoIso}) está activo.`);
+      }
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al actualizar estado del país.'));
+      notifyError('Error al actualizar estado', extractApiError(err, 'Error al actualizar estado del país.'));
     }
   };
 
@@ -110,12 +130,6 @@ export default function PaisesPage() {
           <span>Registrar Nuevo País</span>
         </button>
       </div>
-
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-          {errorMsg}
-        </div>
-      )}
 
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <div className="p-4 bg-[#F4F4F5] border-b border-zinc-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -220,6 +234,7 @@ export default function PaisesPage() {
                 <input
                   type="text"
                   required
+                  maxLength={100}
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
                   placeholder="Ej. Perú"
@@ -228,11 +243,12 @@ export default function PaisesPage() {
               </div>
               <div>
                 <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
-                  Código ISO (3 Caracteres)
+                  Código ISO (2 o 3 Caracteres)
                 </label>
                 <input
                   type="text"
                   required
+                  minLength={2}
                   maxLength={3}
                   value={codigoIso}
                   onChange={(e) => setCodigoIso(e.target.value.toUpperCase())}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../api/axiosClient';
 import { RolDto, UsuarioDto, UsuarioRolDto } from '../../types/models';
+import { notifyError, notifySuccess, notifyUndo, notifyWarning } from '../../utils/notify';
 
 export default function SuperAdminRolesPermisosPage() {
   const [roles, setRoles] = useState<RolDto[]>([]);
@@ -42,14 +43,16 @@ export default function SuperAdminRolesPermisosPage() {
     loadData();
   }, []);
 
-  const assignableRoles = roles.filter((r) => r.nombre.trim().toLowerCase() !== 'superadmin');
+  const assignableRoles = roles.filter(
+    (r) => r.activo && r.nombre.trim().toLowerCase() !== 'superadmin'
+  );
   const superAdminRoleId = roles.find((r) => r.nombre.trim().toLowerCase() === 'superadmin')?.id;
   const superAdminUserIds = new Set(
     asignaciones
       .filter((a) => a.activo && a.rolId === superAdminRoleId)
       .map((a) => a.usuarioId)
   );
-  const assignableUsers = usuarios.filter((u) => !superAdminUserIds.has(u.id));
+  const assignableUsers = usuarios.filter((u) => u.activo && !superAdminUserIds.has(u.id));
   const activeAssignedUserIds = new Set(
     asignaciones.filter((a) => a.activo).map((a) => a.usuarioId)
   );
@@ -61,6 +64,7 @@ export default function SuperAdminRolesPermisosPage() {
     setChangingUserMode(isChange);
     setUsuarioId(presetUsuarioId || unassignedUsers[0]?.id || 0);
     setRolId(assignableRoles[0]?.id || 0);
+    setErrorMsg(null);
     setShowAssignModal(true);
   };
 
@@ -98,32 +102,59 @@ export default function SuperAdminRolesPermisosPage() {
       } else {
         await axiosClient.post('/usuarioroles', { usuarioId, rolId });
       }
+      const targetUser = usuarios.find((u) => u.id === usuarioId);
+      const targetRole = roles.find((r) => r.id === rolId);
+      notifySuccess(
+        changingUserMode ? 'Rol cambiado' : 'Rol asignado',
+        `${targetUser?.nombreCompleto || 'Usuario'} ahora cuenta con el rol ${targetRole?.nombre || 'seleccionado'}.`
+      );
       setShowAssignModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al asignar rol al usuario.'));
+      notifyError('Error al asignar rol', extractApiError(err, 'Error al asignar rol al usuario.'));
     }
   };
 
   const handleToggleAssignment = async (item: UsuarioRolDto, roleName: string) => {
     if (roleName.trim().toLowerCase() === 'superadmin') {
-      setErrorMsg('La asignación del rol SuperAdmin es inmutable.');
+      notifyWarning('Rol protegido', 'La asignación del rol SuperAdmin es inmutable.');
       return;
     }
     setErrorMsg(null);
+    const nextActivo = !item.activo;
     try {
-      if (!item.activo) {
+      if (nextActivo) {
         await revokeOtherActiveRoles(item.usuarioId, item.id);
       }
       await axiosClient.put(`/usuarioroles/${item.id}`, {
         id: item.id,
         usuarioId: item.usuarioId,
         rolId: item.rolId,
-        activo: !item.activo
+        activo: nextActivo
       });
       await loadData();
+      const targetUser = usuarios.find((u) => u.id === item.usuarioId);
+      if (!nextActivo) {
+        notifyUndo(
+          'Rol revocado',
+          `Se retiró el rol ${roleName} a ${targetUser?.nombreCompleto || 'el usuario'}.`,
+          async () => {
+            await revokeOtherActiveRoles(item.usuarioId, item.id);
+            await axiosClient.put(`/usuarioroles/${item.id}`, {
+              id: item.id,
+              usuarioId: item.usuarioId,
+              rolId: item.rolId,
+              activo: true
+            });
+            await loadData();
+            notifySuccess('Rol restaurado', `${targetUser?.nombreCompleto || 'Usuario'} recuperó el rol ${roleName}.`);
+          }
+        );
+      } else {
+        notifySuccess('Rol reactivado', `Se restauró el rol ${roleName}.`);
+      }
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'No se pudo actualizar la asignación de rol.'));
+      notifyError('Error al actualizar rol', extractApiError(err, 'No se pudo actualizar la asignación de rol.'));
     }
   };
 
@@ -132,6 +163,7 @@ export default function SuperAdminRolesPermisosPage() {
     setRoleNombre(rol.nombre);
     setRoleDescripcion(rol.descripcion || '');
     setRoleActivo(rol.activo);
+    setErrorMsg(null);
   };
 
   const handleSaveRole = async (e: React.FormEvent) => {
@@ -145,10 +177,11 @@ export default function SuperAdminRolesPermisosPage() {
         descripcion: roleDescripcion,
         activo: editingRole.nombre.trim().toLowerCase() === 'superadmin' ? true : roleActivo
       });
+      notifySuccess('Rol actualizado', `Los metadatos del rol ${roleNombre} fueron guardados.`);
       setEditingRole(null);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al actualizar el rol maestro.'));
+      notifyError('Error al guardar rol', extractApiError(err, 'Error al actualizar el rol maestro.'));
     }
   };
 
@@ -173,12 +206,6 @@ export default function SuperAdminRolesPermisosPage() {
           <span>Asignar Rol (Incl. Administrador)</span>
         </button>
       </div>
-
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-          {errorMsg}
-        </div>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {roles.map((r) => {
@@ -405,6 +432,7 @@ export default function SuperAdminRolesPermisosPage() {
                 <input
                   type="text"
                   required
+                  maxLength={50}
                   value={roleNombre}
                   onChange={(e) => setRoleNombre(e.target.value)}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs outline-none focus:border-indigo-600"

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../../api/axiosClient';
+import { sileo } from '../../../utils/notify';
 
 interface HistorialDescarga {
   id: string;
@@ -51,25 +52,42 @@ export default function ReportesExcelPage() {
     const fileName = `${prefijo}_${fechaStr}.xlsx`;
 
     try {
-      const res = await axiosClient.get(`/reportes/${endpoint}`, {
-        responseType: 'blob'
-      });
-      const blob = new Blob([res.data], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-      registrarEnHistorial(titulo, fileName, blob.size);
-    } catch (err: any) {
-      setErrorMsg(
-        extractApiError(err, `Error al descargar Sistema AeroManager${endpoint} desde Aeromanager.Api.`)
+      await sileo.promise(
+        async () => {
+          const res = await axiosClient.get(`/reportes/${endpoint}`, {
+            responseType: 'blob'
+          });
+          const blob = new Blob([res.data], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+          registrarEnHistorial(titulo, fileName, blob.size);
+          return fileName;
+        },
+        {
+          loading: {
+            title: 'Generando reporte Excel...',
+            description: `Exportando ${titulo} desde PostgreSQL.`
+          },
+          success: {
+            title: 'Reporte descargado',
+            description: `Archivo ${fileName} generado exitosamente.`
+          },
+          error: (err: any) => ({
+            title: 'Error al exportar Excel',
+            description: extractApiError(err, `No se pudo generar el reporte ${fileName}.`)
+          })
+        }
       );
+    } catch {
+      // Manejado visualmente por sileo.promise
     } finally {
       setDownloading(null);
     }

@@ -131,3 +131,13 @@
 .superadmin-dark textarea::placeholder {
   color: #64748B;
 }
+
+/* ── Sileo Dynamic-Island Toast Overrides ── */
+[data-sileo-viewport] {
+  z-index: 9999 !important;
+}
+
+[data-sileo-viewport][data-theme="light"] [data-sileo-description] {
+  color: rgba(255, 255, 255, 0.78);
+}
+

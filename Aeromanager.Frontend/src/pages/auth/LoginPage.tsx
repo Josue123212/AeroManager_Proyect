@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import axiosClient, { extractApiError } from '../../api/axiosClient';
 import { getHomePathForRoles, getSessionHomePath } from '../../components/auth/ProtectedRoute';
 import { LoginResponseDto, RolActivoType } from '../../types/models';
+import { notifyError, notifySuccess } from '../../utils/notify';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ export default function LoginPage() {
       const data = response.data;
       const realRoles = Array.isArray(data.roles) && data.roles.length > 0 ? data.roles : [];
       if (realRoles.length === 0) {
-        setErrorMsg('El usuario no tiene un rol operativo asignado.');
+        notifyError('Sin rol asignado', 'El usuario no tiene un rol operativo asignado.');
         return;
       }
 
@@ -55,14 +56,18 @@ export default function LoginPage() {
         })
       );
 
+      notifySuccess(
+        `Bienvenido, ${data.nombreCompleto}`,
+        `Sesión activa como ${primaryRole}.`
+      );
       navigate(getHomePathForRoles(realRoles), { replace: true });
     } catch (err: any) {
-      setErrorMsg(
-        extractApiError(
-          err,
-          'Credenciales inválidas o usuario inactivo. Verifique su correo y contraseña.'
-        )
+      const msg = extractApiError(
+        err,
+        'Credenciales inválidas o usuario inactivo. Verifique su correo y contraseña.'
       );
+      setErrorMsg(msg);
+      notifyError('Acceso denegado', msg);
     } finally {
       setLoading(false);
     }

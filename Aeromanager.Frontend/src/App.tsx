@@ -1,5 +1,7 @@
 import React from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { Toaster } from 'sileo';
+import 'sileo/styles.css';
 import LoginPage from './pages/auth/LoginPage';
 import ProtectedRoute, { getSessionHomePath } from './components/auth/ProtectedRoute';
 import AdminHeader from './components/layout/AdminHeader';
@@ -154,6 +156,7 @@ export default function App() {
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
     {showAiAssistant && <GeminiFloatingAssistant />}
+    <Toaster position="top-center" theme="light" />
     </>
   );
 }

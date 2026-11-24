@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { RolActivoType } from '../../types/models';
+import { notifyWarning } from '../../utils/notify';
 
 interface ProtectedRouteProps {
   allowedRoles: RolActivoType[];
@@ -65,6 +66,9 @@ export default function ProtectedRoute({ allowedRoles, children }: ProtectedRout
   const rawUser = localStorage.getItem('aeromanager_user');
 
   if (!token || !rawUser || isJwtExpired(token)) {
+    if (token && isJwtExpired(token)) {
+      notifyWarning('Sesión expirada', 'Tu token de seguridad ha vencido. Inicia sesión nuevamente.');
+    }
     if (token || rawUser) clearSessionStorage();
     return <Navigate to="/login" replace />;
   }

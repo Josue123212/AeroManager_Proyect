@@ -275,9 +275,10 @@ Aeromanager.Frontend/src/
 
 | Nombre | Rol | GitHub |
 |--------|-----|--------|
-| **Josue** | Líder / Backend | [@Josue123212](https://github.com/Josue123212) |
-| **Dixson Apaza** | Frontend / UI | `dixsonapaza-ui` |
+| **Josue Jonas** | Líder / Backend | [@Josue123212](https://github.com/Josue123212) |
+| **Dixson Apaza** | Backend / Fronted | `dixsonapaza-ui` |
 | **Julio** | Backend / Infrastructure | — |
+| **Alexander Tito** | Backend / Infrastructure | — |
 
 > Proyecto desarrollado como parte del programa **TECSUP** — 2026.
 

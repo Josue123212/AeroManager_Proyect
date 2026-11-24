@@ -69,161 +69,195 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-[#18181B] flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl bg-white border border-zinc-200 rounded-xl shadow-lg overflow-hidden flex flex-col md:flex-row">
-        {/* Panel Izquierdo: Identidad Corporativa AeroManager */}
-        <div className="w-full md:w-5/12 bg-[#F4F4F5] p-6 md:p-8 flex flex-col justify-between border-b md:border-b-0 md:border-r border-zinc-200">
-          <div className="flex flex-col gap-5">
-            <div className="flex items-center gap-3">
-              <img
-                src="/logo.png"
-                alt="AeroManager"
-                className="w-10 h-10 rounded-lg shadow-sm object-cover"
-              />
-              <div className="flex flex-col">
-                <span className="text-xl font-bold text-[#18181B] tracking-tight leading-none">
-                  AeroManager
-                </span>
-                <span className="text-[11px] font-semibold text-[#0284C7] uppercase tracking-wider mt-1">
-                  Terminal OPS Suite
-                </span>
-              </div>
-            </div>
+    /* ── Contenedor raíz: posición relativa para que el video quede detrás ── */
+    <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden">
 
-            <div className="mt-2">
-              <p className="text-sm font-semibold text-[#18181B]">
-                Plataforma Centralizada de Gestión Aeroportuaria
-              </p>
-              <p className="text-xs text-zinc-600 mt-1.5 leading-relaxed">
-                Sistema integral para administración de infraestructura aeroportuaria, flota aérea,
-                programación de vuelos, asignación de puertas de embarque y emisión de reservas en
-                mostrador.
-              </p>
-            </div>
+      {/* ── VIDEO DE FONDO ── */}
+      <video
+        className="absolute inset-0 w-full h-full object-cover z-0"
+        src="/videos/hero-bg.mp4"
+        autoPlay
+        loop
+        muted
+        playsInline
+      />
 
-            <div className="bg-white border border-zinc-200 rounded-lg p-3.5 shadow-2xs space-y-2 text-xs text-zinc-700">
-              <div className="font-bold text-[11px] uppercase tracking-wider text-zinc-500">
-                Módulos por Perfil Operativo
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Administrador</span>
-                <span className="font-mono-code font-semibold text-[#0284C7]">
-                  Catálogos, Flota &amp; Reportes
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Operador de Vuelos</span>
-                <span className="font-mono-code font-semibold text-[#0284C7]">
-                  FIDS, Rutas &amp; Gates
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Agente de Counter</span>
-                <span className="font-mono-code font-semibold text-[#0284C7]">
-                  Cabina, Check-In &amp; Tickets
-                </span>
-              </div>
-            </div>
-          </div>
+      {/* ── OVERLAY degradado oscuro sobre el video ── */}
+      <div className="absolute inset-0 z-10 bg-gradient-to-br from-black/70 via-sky-950/60 to-black/80" />
 
-          <div className="mt-6 pt-4 border-t border-zinc-200 flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-zinc-700">
-              <span className="material-symbols-outlined text-base text-[#0284C7]">
-                verified_user
-              </span>
-              <span className="text-xs font-medium">Acceso Seguro con Control de Roles</span>
-            </div>
-            <div className="flex items-center gap-2 text-zinc-700">
-              <span className="material-symbols-outlined text-base text-emerald-600">
-                event_seat
-              </span>
-              <span className="text-xs font-medium">Control Transaccional de Asientos</span>
-            </div>
-          </div>
-        </div>
+      {/* ── PARTÍCULAS decorativas (anillos animados) ── */}
+      <div className="absolute inset-0 z-10 pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full border border-sky-400/10 animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 rounded-full border border-blue-400/10 animate-pulse [animation-delay:1s]" />
+      </div>
 
-        {/* Panel Derecho: Formulario de Autenticación */}
-        <div className="w-full md:w-7/12 bg-white p-6 md:p-8 flex flex-col justify-center">
-          <div className="max-w-md w-full mx-auto flex flex-col">
-            <div className="mb-5">
-              <h2 className="text-2xl font-bold text-[#18181B] tracking-tight">Acceso Operativo</h2>
-              <p className="text-xs text-zinc-500 mt-1">
-                Ingrese sus credenciales autorizadas para acceder a su consola asignada.
-              </p>
-            </div>
+      {/* ── TARJETA PRINCIPAL con glassmorphism + slide-up ── */}
+      <div className="relative z-20 w-full max-w-4xl animate-slide-up">
+        <div className="backdrop-blur-xl bg-white/8 border border-white/15 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
 
-            {errorMsg && (
-              <div className="mb-4 p-3 rounded bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-                {errorMsg}
-              </div>
-            )}
-
-            <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-              <div className="flex flex-col gap-1">
-                <label
-                  htmlFor="email"
-                  className="text-[11px] uppercase text-zinc-700 font-semibold tracking-wider"
-                >
-                  Correo Corporativo
-                </label>
-                <div className="relative flex items-center">
-                  <span className="material-symbols-outlined absolute left-3 text-zinc-400 text-lg">
-                    alternate_email
+          {/* ══════════════════════════════════════════════════
+              Panel Izquierdo: Identidad Corporativa AeroManager
+          ══════════════════════════════════════════════════ */}
+          <div className="w-full md:w-5/12 p-6 md:p-8 flex flex-col justify-between border-b md:border-b-0 md:border-r border-white/10 bg-white/5">
+            <div className="flex flex-col gap-5 animate-fade-in [animation-delay:0.2s]">
+              <div className="flex items-center gap-3">
+                <img
+                  src="/logo.png"
+                  alt="AeroManager"
+                  className="w-10 h-10 rounded-lg shadow-lg object-cover ring-1 ring-white/20"
+                />
+                <div className="flex flex-col">
+                  <span className="text-xl font-bold text-white tracking-tight leading-none drop-shadow">
+                    AeroManager
                   </span>
-                  <input
-                    id="email"
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="usuario@aeromanager.com"
-                    className="w-full h-9 pl-9 pr-3 rounded border border-zinc-300 bg-white text-[#18181B] text-sm outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7]"
-                  />
+                  <span className="text-[11px] font-semibold text-sky-300 uppercase tracking-wider mt-1">
+                    Terminal OPS Suite
+                  </span>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label
-                  htmlFor="password"
-                  className="text-[11px] uppercase text-zinc-700 font-semibold tracking-wider"
-                >
-                  Contraseña
-                </label>
-                <div className="relative flex items-center">
-                  <span className="material-symbols-outlined absolute left-3 text-zinc-400 text-lg">
-                    lock
+              <div className="mt-2">
+                <p className="text-sm font-semibold text-white/90">
+                  Plataforma Centralizada de Gestión Aeroportuaria
+                </p>
+                <p className="text-xs text-white/55 mt-1.5 leading-relaxed">
+                  Sistema integral para administración de infraestructura aeroportuaria, flota aérea,
+                  programación de vuelos, asignación de puertas de embarque y emisión de reservas en
+                  mostrador.
+                </p>
+              </div>
+
+              <div className="backdrop-blur-sm bg-white/8 border border-white/12 rounded-xl p-3.5 space-y-2 text-xs text-white/80">
+                <div className="font-bold text-[11px] uppercase tracking-wider text-white/40">
+                  Módulos por Perfil Operativo
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Administrador</span>
+                  <span className="font-mono-code font-semibold text-sky-300">
+                    Catálogos, Flota &amp; Reportes
                   </span>
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••••••"
-                    className="w-full h-9 pl-9 pr-10 rounded border border-zinc-300 bg-white text-[#18181B] text-sm outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 text-zinc-500 hover:text-zinc-800 flex items-center justify-center"
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Operador de Vuelos</span>
+                  <span className="font-mono-code font-semibold text-sky-300">
+                    FIDS, Rutas &amp; Gates
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Agente de Counter</span>
+                  <span className="font-mono-code font-semibold text-sky-300">
+                    Cabina, Check-In &amp; Tickets
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-white/10 flex flex-col gap-2 animate-fade-in [animation-delay:0.4s]">
+              <div className="flex items-center gap-2 text-white/70">
+                <span className="material-symbols-outlined text-base text-sky-300">
+                  verified_user
+                </span>
+                <span className="text-xs font-medium">Acceso Seguro con Control de Roles</span>
+              </div>
+              <div className="flex items-center gap-2 text-white/70">
+                <span className="material-symbols-outlined text-base text-emerald-400">
+                  event_seat
+                </span>
+                <span className="text-xs font-medium">Control Transaccional de Asientos</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ══════════════════════════════════════════════════
+              Panel Derecho: Formulario de Autenticación
+          ══════════════════════════════════════════════════ */}
+          <div className="w-full md:w-7/12 p-6 md:p-8 flex flex-col justify-center bg-white/5">
+            <div className="max-w-md w-full mx-auto flex flex-col animate-slide-up [animation-delay:0.15s]">
+              <div className="mb-5">
+                <h2 className="text-2xl font-bold text-white tracking-tight">Acceso Operativo</h2>
+                <p className="text-xs text-white/50 mt-1">
+                  Ingrese sus credenciales autorizadas para acceder a su consola asignada.
+                </p>
+              </div>
+
+              {errorMsg && (
+                <div className="mb-4 p-3 rounded-lg bg-red-500/15 border border-red-400/30 text-red-300 text-xs font-medium backdrop-blur-sm">
+                  {errorMsg}
+                </div>
+              )}
+
+              <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+                <div className="flex flex-col gap-1">
+                  <label
+                    htmlFor="email"
+                    className="text-[11px] uppercase text-white/60 font-semibold tracking-wider"
                   >
-                    <span className="material-symbols-outlined text-lg">
-                      {showPassword ? 'visibility_off' : 'visibility'}
+                    Correo Corporativo
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="material-symbols-outlined absolute left-3 text-white/40 text-lg">
+                      alternate_email
                     </span>
-                  </button>
+                    <input
+                      id="email"
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="usuario@aeromanager.com"
+                      className="w-full h-10 pl-9 pr-3 rounded-lg border border-white/15 bg-white/8 text-white placeholder-white/30 text-sm outline-none focus:border-sky-400/60 focus:ring-1 focus:ring-sky-400/40 backdrop-blur-sm transition-colors"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full h-9 mt-1 bg-[#0284C7] hover:bg-[#0369A1] text-white text-sm font-semibold rounded shadow-xs flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-60"
-              >
-                <span>{loading ? 'Verificando credenciales...' : 'Iniciar Sesión'}</span>
-                <span className="material-symbols-outlined text-lg">arrow_forward</span>
-              </button>
-            </form>
+                <div className="flex flex-col gap-1">
+                  <label
+                    htmlFor="password"
+                    className="text-[11px] uppercase text-white/60 font-semibold tracking-wider"
+                  >
+                    Contraseña
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="material-symbols-outlined absolute left-3 text-white/40 text-lg">
+                      lock
+                    </span>
+                    <input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="w-full h-10 pl-9 pr-10 rounded-lg border border-white/15 bg-white/8 text-white placeholder-white/30 text-sm outline-none focus:border-sky-400/60 focus:ring-1 focus:ring-sky-400/40 backdrop-blur-sm transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 text-white/40 hover:text-white/80 flex items-center justify-center transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-lg">
+                        {showPassword ? 'visibility_off' : 'visibility'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-10 mt-1 bg-sky-500 hover:bg-sky-400 text-white text-sm font-semibold rounded-lg shadow-lg shadow-sky-500/25 flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98]"
+                >
+                  <span>{loading ? 'Verificando credenciales...' : 'Iniciar Sesión'}</span>
+                  <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                </button>
+              </form>
+
+              <p className="mt-6 text-center text-[10px] text-white/25 tracking-wide">
+                AeroManager OPS &nbsp;·&nbsp; Acceso Restringido &nbsp;·&nbsp; v2.0
+              </p>
+            </div>
           </div>
+
         </div>
       </div>
     </div>

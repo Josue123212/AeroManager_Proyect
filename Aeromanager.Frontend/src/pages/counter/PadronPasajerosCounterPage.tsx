@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import axiosClient, { extractApiError } from '../../api/axiosClient';
 import { useScopedNavigate } from '../../utils/scopedNavigation';
+import { notifyError, notifySuccess, notifyUndo } from '../../utils/notify';
 import {
   DetalleReservaDto,
   PaisDto,
@@ -10,6 +11,7 @@ import {
 
 export default function PadronPasajerosCounterPage() {
   const navigate = useScopedNavigate();
+  const formRef = useRef<HTMLFormElement>(null);
   const [pasajeros, setPasajeros] = useState<PasajeroDto[]>([]);
   const [tiposDoc, setTiposDoc] = useState<TipoDocumentoDto[]>([]);
   const [paises, setPaises] = useState<PaisDto[]>([]);
@@ -60,11 +62,11 @@ export default function PadronPasajerosCounterPage() {
     setEditing(null);
     setNombres('');
     setApellidos('');
-    setTipoDocumentoId(tiposDoc[0]?.id || 0);
+    setTipoDocumentoId(tiposDoc.find((t) => t.activo)?.id || 0);
     setNumeroDocumento('');
     setEmail('');
     setTelefono('');
-    setNacionalidadPaisId(paises[0]?.id || 0);
+    setNacionalidadPaisId(paises.find((p) => p.activo)?.id || 0);
     setActivo(true);
     setErrorMsg(null);
     setShowModal(true);
@@ -84,8 +86,12 @@ export default function PadronPasajerosCounterPage() {
     setShowModal(true);
   };
 
+  const selectedTipoDoc = tiposDoc.find((t) => t.id === tipoDocumentoId);
+  const maxDocLen = selectedTipoDoc?.longitudMaxima || 30;
+
   const handleToggleActivo = async (item: PasajeroDto) => {
     setErrorMsg(null);
+    const nextActivo = !item.activo;
     try {
       await axiosClient.put(`/pasajeros/${item.id}`, {
         id: item.id,
@@ -96,17 +102,53 @@ export default function PadronPasajerosCounterPage() {
         email: item.email,
         telefono: item.telefono || '',
         nacionalidadPaisId: item.nacionalidadPaisId,
-        activo: !item.activo
+        activo: nextActivo
       });
       await loadData();
+      if (!nextActivo) {
+        notifyUndo(
+          'Pasajero desactivado',
+          `${item.nombres} ${item.apellidos} fue marcado como inactivo.`,
+          async () => {
+            await axiosClient.put(`/pasajeros/${item.id}`, {
+              id: item.id,
+              nombres: item.nombres,
+              apellidos: item.apellidos,
+              tipoDocumentoId: item.tipoDocumentoId,
+              numeroDocumento: item.numeroDocumento,
+              email: item.email,
+              telefono: item.telefono || '',
+              nacionalidadPaisId: item.nacionalidadPaisId,
+              activo: true
+            });
+            await loadData();
+            notifySuccess('Pasajero reactivado', `${item.nombres} ${item.apellidos} está activo.`);
+          }
+        );
+      } else {
+        notifySuccess('Pasajero reactivado', `${item.nombres} ${item.apellidos} está activo.`);
+      }
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al actualizar estado del pasajero.'));
+      notifyError(
+        'Error al actualizar estado',
+        extractApiError(err, 'Error al actualizar estado del pasajero.')
+      );
     }
   };
 
   const handleSave = async (e: React.FormEvent, goToCabinAfter: boolean) => {
     e.preventDefault();
+    if (goToCabinAfter && formRef.current && !formRef.current.reportValidity()) {
+      return;
+    }
     setErrorMsg(null);
+    if (numeroDocumento.trim().length > maxDocLen) {
+      notifyError(
+        'Longitud de documento excedida',
+        `El tipo ${selectedTipoDoc?.codigo || 'seleccionado'} permite como máximo ${maxDocLen} caracteres.`
+      );
+      return;
+    }
     try {
       if (editing) {
         await axiosClient.put(`/pasajeros/${editing.id}`, {
@@ -114,22 +156,24 @@ export default function PadronPasajerosCounterPage() {
           nombres,
           apellidos,
           tipoDocumentoId,
-          numeroDocumento,
+          numeroDocumento: numeroDocumento.trim().toUpperCase(),
           email,
           telefono,
           nacionalidadPaisId,
           activo
         });
+        notifySuccess('Datos actualizados', `Se guardó la ficha de ${nombres} ${apellidos}.`);
       } else {
         const res = await axiosClient.post<PasajeroDto>('/pasajeros', {
           nombres,
           apellidos,
           tipoDocumentoId,
-          numeroDocumento,
+          numeroDocumento: numeroDocumento.trim().toUpperCase(),
           email,
           telefono,
           nacionalidadPaisId
         });
+        notifySuccess('Pasajero registrado', `${nombres} ${apellidos} fue incorporado al padrón.`);
         if (goToCabinAfter && res.data?.id) {
           localStorage.setItem('aeromanager_counter_pasajero_id', String(res.data.id));
         }
@@ -140,7 +184,8 @@ export default function PadronPasajerosCounterPage() {
         navigate('/counter/cabina');
       }
     } catch (err: any) {
-      setErrorMsg(
+      notifyError(
+        'No se pudo guardar el pasajero',
         extractApiError(err, 'Error al guardar los datos del pasajero.')
       );
     }
@@ -190,12 +235,6 @@ export default function PadronPasajerosCounterPage() {
           <span>Registrar Nuevo Pasajero</span>
         </button>
       </div>
-
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-          {errorMsg}
-        </div>
-      )}
 
       {/* Barra de Búsqueda + Filtro por Tipo de Documento */}
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
@@ -335,6 +374,7 @@ export default function PadronPasajerosCounterPage() {
             </div>
 
             <form
+              ref={formRef}
               onSubmit={(e) => handleSave(e, false)}
               className="p-5 space-y-4"
             >
@@ -346,6 +386,7 @@ export default function PadronPasajerosCounterPage() {
                   <input
                     type="text"
                     required
+                    maxLength={100}
                     value={nombres}
                     onChange={(e) => setNombres(e.target.value)}
                     placeholder="Ej. Valeria"
@@ -359,6 +400,7 @@ export default function PadronPasajerosCounterPage() {
                   <input
                     type="text"
                     required
+                    maxLength={100}
                     value={apellidos}
                     onChange={(e) => setApellidos(e.target.value)}
                     placeholder="Ej. Gómez Rojas"
@@ -375,26 +417,38 @@ export default function PadronPasajerosCounterPage() {
                   <select
                     required
                     value={tipoDocumentoId}
-                    onChange={(e) => setTipoDocumentoId(Number(e.target.value))}
+                    onChange={(e) => {
+                      const nextId = Number(e.target.value);
+                      setTipoDocumentoId(nextId);
+                      const nextTd = tiposDoc.find((t) => t.id === nextId);
+                      if (nextTd && numeroDocumento.length > nextTd.longitudMaxima) {
+                        setNumeroDocumento(numeroDocumento.slice(0, nextTd.longitudMaxima));
+                      }
+                    }}
                     className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                   >
-                    {tiposDoc.map((td) => (
-                      <option key={td.id} value={td.id}>
-                        {td.codigo} — {td.nombre} (Máx {td.longitudMaxima})
-                      </option>
-                    ))}
+                    {tiposDoc
+                      .filter((td) => td.activo || (editing && td.id === editing.tipoDocumentoId))
+                      .map((td) => (
+                        <option key={td.id} value={td.id}>
+                          {td.codigo} — {td.nombre} (Máx {td.longitudMaxima})
+                        </option>
+                      ))}
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-bold uppercase text-zinc-700 mb-1">
-                    Número de Documento (Único)
+                    Número de Documento (Máx {maxDocLen} car.)
                   </label>
                   <input
                     type="text"
                     required
+                    maxLength={maxDocLen}
                     value={numeroDocumento}
-                    onChange={(e) => setNumeroDocumento(e.target.value.toUpperCase())}
+                    onChange={(e) =>
+                      setNumeroDocumento(e.target.value.toUpperCase().slice(0, maxDocLen))
+                    }
                     placeholder="74819203"
                     className="w-full h-9 px-3 rounded border border-zinc-300 font-mono-code text-xs outline-none focus:border-[#0284C7]"
                   />
@@ -409,6 +463,7 @@ export default function PadronPasajerosCounterPage() {
                   <input
                     type="email"
                     required
+                    maxLength={150}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="pasajero@correo.com"
@@ -422,6 +477,7 @@ export default function PadronPasajerosCounterPage() {
                   </label>
                   <input
                     type="text"
+                    maxLength={30}
                     value={telefono}
                     onChange={(e) => setTelefono(e.target.value)}
                     placeholder="+51 987654321"
@@ -440,11 +496,13 @@ export default function PadronPasajerosCounterPage() {
                   onChange={(e) => setNacionalidadPaisId(Number(e.target.value))}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                 >
-                  {paises.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombre} ({p.codigoIso})
-                    </option>
-                  ))}
+                  {paises
+                    .filter((p) => p.activo || (editing && p.id === editing.nacionalidadPaisId))
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nombre} ({p.codigoIso})
+                      </option>
+                    ))}
                 </select>
               </div>
 

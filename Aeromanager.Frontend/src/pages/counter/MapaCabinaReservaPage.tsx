@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../api/axiosClient';
 import { useScopedNavigate } from '../../utils/scopedNavigation';
+import { notifyError, notifyInfo, notifyWarning, sileo } from '../../utils/notify';
 import {
   AeropuertoDto,
   AsientoDto,
@@ -74,16 +75,25 @@ export default function MapaCabinaReservaPage() {
       const savedVuelo = Number(localStorage.getItem('aeromanager_counter_vuelo_id') || 0);
       const savedPasajero = Number(localStorage.getItem('aeromanager_counter_pasajero_id') || 0);
 
-      if (savedVuelo && vRes.data.some((v) => v.id === savedVuelo)) {
+      const vuelosDisponibles = vRes.data.filter((v) => {
+        if (!v.activo) return false;
+        const up = (v.estado || '').toUpperCase();
+        return !up.includes('CANCEL') && !up.includes('VUELO') && !up.includes('ATERRIZ');
+      });
+      const activePasajeros = paRes.data.filter((p) => p.activo);
+
+      if (savedVuelo && vuelosDisponibles.some((v) => v.id === savedVuelo)) {
         setSelectedVueloId(savedVuelo);
-      } else if (selectedVueloId === 0 && vRes.data.length > 0) {
-        setSelectedVueloId(vRes.data[0].id);
+      } else if (vuelosDisponibles.length > 0) {
+        setSelectedVueloId(vuelosDisponibles[0].id);
+      } else {
+        setSelectedVueloId(0);
       }
 
-      if (savedPasajero && paRes.data.some((p) => p.id === savedPasajero)) {
+      if (savedPasajero && activePasajeros.some((p) => p.id === savedPasajero)) {
         setSelectedPasajeroId(savedPasajero);
-      } else if (paRes.data.length > 0) {
-        setSelectedPasajeroId(paRes.data[0].id);
+      } else if (activePasajeros.length > 0) {
+        setSelectedPasajeroId(activePasajeros[0].id);
       }
     } catch (err: any) {
       setErrorMsg(
@@ -98,7 +108,12 @@ export default function MapaCabinaReservaPage() {
     loadData();
   }, []);
 
-  const currentVuelo = vuelos.find((v) => v.id === selectedVueloId);
+  const vuelosDisponibles = vuelos.filter((v) => {
+    if (!v.activo) return false;
+    const up = (v.estado || '').toUpperCase();
+    return !up.includes('CANCEL') && !up.includes('VUELO') && !up.includes('ATERRIZ');
+  });
+  const currentVuelo = vuelosDisponibles.find((v) => v.id === selectedVueloId);
   const estadoVueloUp = (currentVuelo?.estado || '').toUpperCase();
   const isVentaAbierta =
     Boolean(currentVuelo) &&
@@ -181,8 +196,12 @@ export default function MapaCabinaReservaPage() {
   const openConfirmModal = () => {
     if (!selectedItem || !isVentaAbierta) return;
     setCodigoTicket(generateUniqueTicketCode());
-    if (!selectedPasajeroId && pasajeros.length > 0) {
-      setSelectedPasajeroId(pasajeros[0].id);
+    const activePasajeros = pasajeros.filter((p) => p.activo);
+    if (
+      (!selectedPasajeroId || !activePasajeros.some((p) => p.id === selectedPasajeroId)) &&
+      activePasajeros.length > 0
+    ) {
+      setSelectedPasajeroId(activePasajeros[0].id);
     }
     setCopied(false);
     setErrorMsg(null);
@@ -192,6 +211,7 @@ export default function MapaCabinaReservaPage() {
   const handleCopyTicket = () => {
     navigator.clipboard.writeText(codigoTicket);
     setCopied(true);
+    notifyInfo('Código copiado', `El código ${codigoTicket} se copió al portapapeles.`);
     setTimeout(() => setCopied(false), 1800);
   };
 
@@ -209,6 +229,10 @@ export default function MapaCabinaReservaPage() {
       );
       if (freshSeatRes.data.estaOcupado) {
         await loadData();
+        notifyWarning(
+          `Asiento ${selectedItem.designador} ocupado`,
+          'Otro agente acaba de reservar esta butaca. Seleccione una alternativa.'
+        );
         triggerConflictAlert(selectedItem.designador, selectedItem.claseId);
         return;
       }
@@ -218,22 +242,40 @@ export default function MapaCabinaReservaPage() {
       const parsedUser = storedUser ? JSON.parse(storedUser) : null;
       const validUsuarioId = Number(parsedUser?.usuarioId) || 1;
 
-      // 3. Crear cabecera Reserva
-      const reservaRes = await axiosClient.post<ReservaDto>('/reservas', {
-        codigoTicket,
-        vueloId: currentVuelo.id,
-        usuarioRegistroId: validUsuarioId,
-        montoTotal: subtotalAsiento,
-        estadoReserva: 'Confirmada'
-      });
+      await sileo.promise(
+        async () => {
+          // 3. Crear cabecera Reserva
+          const reservaRes = await axiosClient.post<ReservaDto>('/reservas', {
+            codigoTicket,
+            vueloId: currentVuelo.id,
+            usuarioRegistroId: validUsuarioId,
+            montoTotal: subtotalAsiento,
+            estadoReserva: 'Confirmada'
+          });
 
-      // 4. Crear DetalleReserva transaccional (ejecuta ReservaDomainService + UnitOfWork Begin/Commit)
-      await axiosClient.post('/detallesreserva', {
-        reservaId: reservaRes.data.id,
-        pasajeroId: selectedPasajeroId,
-        asientoVueloId: selectedItem.asientoVuelo.id,
-        precioUnitario: subtotalAsiento
-      });
+          // 4. Crear DetalleReserva transaccional (ejecuta ReservaDomainService + UnitOfWork Begin/Commit)
+          await axiosClient.post('/detallesreserva', {
+            reservaId: reservaRes.data.id,
+            pasajeroId: selectedPasajeroId,
+            asientoVueloId: selectedItem.asientoVuelo.id,
+            precioUnitario: subtotalAsiento
+          });
+        },
+        {
+          loading: {
+            title: 'Procesando reserva UnitOfWork...',
+            description: `Bloqueando asiento ${selectedItem.designador} y emitiendo ticket ${codigoTicket}.`
+          },
+          success: {
+            title: '¡Reserva confirmada!',
+            description: `Ticket ${codigoTicket} emitido para la butaca ${selectedItem.designador}.`
+          },
+          error: (err: any) => ({
+            title: 'No se pudo completar la reserva',
+            description: extractApiError(err, 'Error al procesar la transacción.')
+          })
+        }
+      );
 
       setShowConfirmModal(false);
       setSelectedAsientoVueloId(0);
@@ -250,11 +292,8 @@ export default function MapaCabinaReservaPage() {
       ) {
         await loadData();
         triggerConflictAlert(selectedItem.designador, selectedItem.claseId);
-      } else {
-        setErrorMsg(
-          backendMsg ||
-            'Error al procesar la reserva transaccional. Verifique que exista al menos un Usuario y un Pasajero.'
-        );
+      } else if (backendMsg) {
+        notifyError('Error en reserva', backendMsg);
       }
     } finally {
       setSubmitting(false);
@@ -289,8 +328,8 @@ export default function MapaCabinaReservaPage() {
             }}
             className="h-9 px-3 rounded border border-zinc-300 bg-white font-mono-code text-xs font-bold text-[#0284C7] outline-none focus:border-[#0284C7]"
           >
-            {vuelos.length === 0 && <option value={0}>Sin vuelos</option>}
-            {vuelos.map((v) => (
+            {vuelosDisponibles.length === 0 && <option value={0}>Sin vuelos disponibles</option>}
+            {vuelosDisponibles.map((v) => (
               <option key={v.id} value={v.id}>
                 Vuelo Activo: {v.numeroVuelo} (${v.precioBase.toFixed(2)} USD)
               </option>
@@ -313,7 +352,14 @@ export default function MapaCabinaReservaPage() {
         </div>
       )}
 
-      {/* Layout Principal: Columna Izquierda/Central (Fuselaje) + Columna Derecha (Detalle del Asiento) */}
+      {!currentVuelo ? (
+        <div className="p-10 bg-white border border-zinc-200 rounded-xl shadow-2xs text-center text-xs text-zinc-500">
+          {loading
+            ? 'Cargando información de cabina...'
+            : 'No hay vuelos disponibles para reserva en este momento. Programe un vuelo en la Consola Operador.'}
+        </div>
+      ) : (
+      /* Layout Principal: Columna Izquierda/Central (Fuselaje) + Columna Derecha (Detalle del Asiento) */
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Columna Izquierda/Central (8 cols): Fuselaje y Grilla de Cabina */}
         <div className="lg:col-span-8 bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden flex flex-col">
@@ -426,12 +472,10 @@ export default function MapaCabinaReservaPage() {
                           key={colLetra}
                           type="button"
                           onClick={() => handleClickSeat(found)}
-                          title={`${found.designador} (${found.claseNombre}) - ${
-                            isOccupied ? 'OCUPADO' : 'DISPONIBLE'
-                          }`}
-                          className={`h-10 rounded border font-mono-code text-xs font-bold flex items-center justify-center transition-all cursor-pointer ${btnStyle} ${
-                            isVip && !isSelected ? 'ring-2 ring-amber-400' : ''
-                          }`}
+                          title={`${found.designador} (${found.claseNombre}) - ${isOccupied ? 'OCUPADO' : 'DISPONIBLE'
+                            }`}
+                          className={`h-10 rounded border font-mono-code text-xs font-bold flex items-center justify-center transition-all cursor-pointer ${btnStyle} ${isVip && !isSelected ? 'ring-2 ring-amber-400' : ''
+                            }`}
                         >
                           {found.designador}
                         </button>
@@ -523,11 +567,10 @@ export default function MapaCabinaReservaPage() {
                     type="button"
                     disabled={!isVentaAbierta}
                     onClick={openConfirmModal}
-                    className={`w-full h-10 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs ${
-                      isVentaAbierta
-                        ? 'bg-[#0284C7] hover:bg-[#0369A1] text-white cursor-pointer'
-                        : 'bg-zinc-200 text-zinc-500 cursor-not-allowed'
-                    }`}
+                    className={`w-full h-10 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-xs ${isVentaAbierta
+                      ? 'bg-[#0284C7] hover:bg-[#0369A1] text-white cursor-pointer'
+                      : 'bg-zinc-200 text-zinc-500 cursor-not-allowed'
+                      }`}
                   >
                     <span>
                       {isVentaAbierta
@@ -575,6 +618,7 @@ export default function MapaCabinaReservaPage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* MODAL 5: Confirmación Transaccional de Reserva (Sin métodos de pago) */}
       {showConfirmModal && selectedItem && currentVuelo && (
@@ -657,14 +701,16 @@ export default function MapaCabinaReservaPage() {
                   onChange={(e) => setSelectedPasajeroId(Number(e.target.value))}
                   className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                 >
-                  {pasajeros.length === 0 && (
-                    <option value={0}>No hay pasajeros — Registre uno primero</option>
+                  {pasajeros.filter((p) => p.activo).length === 0 && (
+                    <option value={0}>No hay pasajeros activos — Registre uno primero</option>
                   )}
-                  {pasajeros.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombres} {p.apellidos} — Doc: {p.numeroDocumento}
-                    </option>
-                  ))}
+                  {pasajeros
+                    .filter((p) => p.activo)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.nombres} {p.apellidos} — Doc: {p.numeroDocumento}
+                      </option>
+                    ))}
                 </select>
               </div>
 

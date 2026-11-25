@@ -63,8 +63,9 @@ export default function CarteleraVuelosCounterPage() {
     const up = v.estado.toUpperCase();
     return !up.includes('CANCEL') && !up.includes('VUELO') && !up.includes('ATERRIZ');
   });
+  const availableVueloIds = new Set(vuelosDisponibles.map((v) => v.id));
   const totalAsientosLibres = asientosVuelo.filter(
-    (av) => av.activo && !av.estaOcupado
+    (av) => av.activo && !av.estaOcupado && availableVueloIds.has(av.vueloId)
   ).length;
 
   const handleSeleccionarVueloParaReserva = (vueloId: number) => {

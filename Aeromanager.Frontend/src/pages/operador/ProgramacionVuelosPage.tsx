@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../api/axiosClient';
+import { notifyError, notifySuccess, notifyWarning, sileo } from '../../utils/notify';
 import {
   AeropuertoDto,
   AsientoVueloDto,
@@ -98,19 +99,107 @@ export default function ProgramacionVuelosPage() {
     )}:${pad(d.getMinutes())}`;
   };
 
+  const getGatesForRuta = (targetRutaId: number, currentEditing: VueloDto | null) => {
+    const rutaObj = rutas.find((r) => r.id === targetRutaId);
+    if (!rutaObj) return puertas.filter((p) => p.activo);
+    const originTermIds = new Set(
+      terminales
+        .filter((t) => t.aeropuertoId === rutaObj.aeropuertoOrigenId && t.activo)
+        .map((t) => t.id)
+    );
+    return puertas.filter(
+      (p) =>
+        (p.activo && originTermIds.has(p.terminalId)) ||
+        Boolean(
+          currentEditing &&
+          currentEditing.rutaId === targetRutaId &&
+          currentEditing.puertaEmbarqueId === p.id
+        )
+    );
+  };
+
+  const getAvionScheduleConflict = (
+    targetAvionId: number,
+    salidaIsoOrLocal: string,
+    llegadaIsoOrLocal: string,
+    excludeVueloId?: number
+  ) => {
+    if (!salidaIsoOrLocal || !llegadaIsoOrLocal) return undefined;
+    const startMs = new Date(salidaIsoOrLocal).getTime();
+    const endMs = new Date(llegadaIsoOrLocal).getTime();
+    if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs <= startMs) return undefined;
+
+    return vuelos.find((v) => {
+      if (!v.activo || v.avionId !== targetAvionId) return false;
+      if (excludeVueloId && v.id === excludeVueloId) return false;
+      const up = (v.estado || '').toUpperCase();
+      if (up.includes('CANCEL') || up.includes('ATERRIZ')) return false;
+      const vStart = new Date(v.fechaHoraSalida).getTime();
+      const vEnd = new Date(v.fechaHoraLlegada).getTime();
+      return vStart < endMs && startMs < vEnd;
+    });
+  };
+
+  const getGateScheduleConflict = (
+    targetGateId: number,
+    salidaIsoOrLocal: string,
+    excludeVueloId?: number
+  ) => {
+    if (!salidaIsoOrLocal) return undefined;
+    const startMs = new Date(salidaIsoOrLocal).getTime();
+    if (Number.isNaN(startMs)) return undefined;
+
+    return vuelos.find((v) => {
+      if (!v.activo || v.puertaEmbarqueId !== targetGateId) return false;
+      if (excludeVueloId && v.id === excludeVueloId) return false;
+      const up = (v.estado || '').toUpperCase();
+      if (up.includes('CANCEL') || up.includes('ATERRIZ')) return false;
+      const vStart = new Date(v.fechaHoraSalida).getTime();
+      return Math.abs(vStart - startMs) < 45 * 60 * 1000;
+    });
+  };
+
   const openCreate = () => {
     setEditing(null);
     setNumeroVuelo('');
-    setRutaId(rutas[0]?.id || 0);
-    const firstAvion = aviones[0];
-    setAvionId(firstAvion?.id || 0);
-    setCapacidadVuelo(firstAvion?.capacidadFisica || 180);
-    setPuertaEmbarqueId(puertas[0]?.id || 0);
+    const firstActiveRuta = rutas.find((r) => r.activo);
+    const initialRutaId = firstActiveRuta?.id || 0;
+    setRutaId(initialRutaId);
     const now = new Date();
     const out = new Date(now.getTime() + 2 * 60 * 60 * 1000);
     const arr = new Date(out.getTime() + 90 * 60 * 1000);
-    setFechaHoraSalida(toDatetimeLocal(out.toISOString()));
-    setFechaHoraLlegada(toDatetimeLocal(arr.toISOString()));
+    const outLocal = toDatetimeLocal(out.toISOString());
+    const arrLocal = toDatetimeLocal(arr.toISOString());
+    const firstOperativeAvion =
+      aviones.find(
+        (a) =>
+          a.activo &&
+          !a.estadoOperativo.toUpperCase().includes('MANTEN') &&
+          !a.estadoOperativo.toUpperCase().includes('FUERA') &&
+          !getAvionScheduleConflict(a.id, outLocal, arrLocal)
+      ) ||
+      aviones.find(
+        (a) =>
+          a.activo &&
+          !a.estadoOperativo.toUpperCase().includes('MANTEN') &&
+          !a.estadoOperativo.toUpperCase().includes('FUERA')
+      ) ||
+      aviones.find((a) => a.activo);
+    setAvionId(firstOperativeAvion?.id || 0);
+    setCapacidadVuelo(firstOperativeAvion?.capacidadFisica || 180);
+    const originGates = getGatesForRuta(initialRutaId, null);
+    const firstAvailableGate =
+      originGates.find(
+        (p) =>
+          p.activo &&
+          !p.estado.toUpperCase().includes('MANTEN') &&
+          !getGateScheduleConflict(p.id, outLocal)
+      ) ||
+      originGates.find((p) => p.activo && !p.estado.toUpperCase().includes('MANTEN')) ||
+      originGates[0];
+    setPuertaEmbarqueId(firstAvailableGate?.id || 0);
+    setFechaHoraSalida(outLocal);
+    setFechaHoraLlegada(arrLocal);
     setPrecioBase(120.0);
     setEstado('Programado');
     setActivo(true);
@@ -132,26 +221,71 @@ export default function ProgramacionVuelosPage() {
     setActivo(item.activo);
     setErrorMsg(null);
     setShowModal(true);
+    if (isVueloCerrado(item.estado) && isSuperAdmin) {
+      notifyWarning(
+        'Modo Override SuperAdmin',
+        `Editando vuelo histórico ${item.numeroVuelo} en estado ${item.estado}.`
+      );
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
-    const std = new Date(fechaHoraSalida);
-    const sta = new Date(fechaHoraLlegada);
-    if (sta <= std) {
-      setErrorMsg(
-        'Regla Cronológica Obligatoria: La fecha y hora de llegada debe ser estrictamente posterior a la fecha y hora de salida.'
+    if (!puertaEmbarqueId) {
+      notifyError(
+        'Sin puerta de embarque disponible',
+        'El aeropuerto de origen de esta ruta no cuenta con puertas activas habilitadas.'
       );
       return;
     }
 
+    const selectedAvion = aviones.find((a) => a.id === avionId);
+    if (
+      selectedAvion &&
+      (!editing || editing.avionId !== avionId) &&
+      (!selectedAvion.activo ||
+        selectedAvion.estadoOperativo.toUpperCase().includes('MANTEN') ||
+        selectedAvion.estadoOperativo.toUpperCase().includes('FUERA'))
+    ) {
+      notifyError(
+        'Aeronave no operativa',
+        `La aeronave ${selectedAvion.matricula} está en estado ${selectedAvion.activo ? selectedAvion.estadoOperativo : 'Inactiva'} y no puede asignarse.`
+      );
+      return;
+    }
+
+    const std = new Date(fechaHoraSalida);
+    const sta = new Date(fechaHoraLlegada);
+    if (sta <= std) {
+      notifyError(
+        'Regla Cronológica Obligatoria',
+        'La fecha y hora de llegada debe ser estrictamente posterior a la fecha y hora de salida.'
+      );
+      return;
+    }
+
+    const avionConflict = getAvionScheduleConflict(
+      avionId,
+      fechaHoraSalida,
+      fechaHoraLlegada,
+      editing?.id
+    );
+    if (avionConflict && !estado.toUpperCase().includes('CANCEL')) {
+      notifyError(
+        'Conflicto de Aeronave',
+        `El avión ${selectedAvion?.matricula || ''} ya está asignado al vuelo ${avionConflict.numeroVuelo} en ese horario.`
+      );
+      return;
+    }
+
+    const cleanCode = numeroVuelo.trim().toUpperCase();
     try {
       if (editing) {
         await axiosClient.put(`/vuelos/${editing.id}`, {
           id: editing.id,
-          numeroVuelo: numeroVuelo.trim().toUpperCase(),
+          numeroVuelo: cleanCode,
           rutaId,
           avionId,
           puertaEmbarqueId,
@@ -162,9 +296,10 @@ export default function ProgramacionVuelosPage() {
           estado,
           activo
         });
+        notifySuccess('Vuelo actualizado', `La programación de ${cleanCode} fue guardada.`);
       } else {
         await axiosClient.post('/vuelos', {
-          numeroVuelo: numeroVuelo.trim().toUpperCase(),
+          numeroVuelo: cleanCode,
           rutaId,
           avionId,
           puertaEmbarqueId,
@@ -174,11 +309,13 @@ export default function ProgramacionVuelosPage() {
           precioBase,
           estado
         });
+        notifySuccess('Vuelo programado', `El vuelo ${cleanCode} fue creado exitosamente.`);
       }
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(
+      notifyError(
+        'No se pudo guardar el vuelo',
         extractApiError(err, 'Error al guardar la programación del vuelo.')
       );
     }
@@ -186,21 +323,40 @@ export default function ProgramacionVuelosPage() {
 
   const handleExportExcel = async () => {
     setErrorMsg(null);
+    const fileName = `Reporte_Vuelos_${new Date().toISOString().slice(0, 10)}.xlsx`;
     try {
-      const res = await axiosClient.get('/reportes/vuelos-excel', { responseType: 'blob' });
-      const blob = new Blob([res.data], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-      });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Reporte_Vuelos_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al exportar reporte de vuelos (.xlsx).'));
+      await sileo.promise(
+        async () => {
+          const res = await axiosClient.get('/reportes/vuelos-excel', { responseType: 'blob' });
+          const blob = new Blob([res.data], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+        },
+        {
+          loading: {
+            title: 'Generando reporte de vuelos...',
+            description: 'Exportando cronograma operativo en formato .xlsx.'
+          },
+          success: {
+            title: 'Reporte exportado',
+            description: `${fileName} descargado correctamente.`
+          },
+          error: (err: any) => ({
+            title: 'Error al exportar reporte',
+            description: extractApiError(err, 'Error al exportar reporte de vuelos (.xlsx).')
+          })
+        }
+      );
+    } catch {
+      // Manejado por sileo.promise
     }
   };
 
@@ -280,12 +436,6 @@ export default function ProgramacionVuelosPage() {
         </div>
       </div>
 
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-          {errorMsg}
-        </div>
-      )}
-
       {/* Pestañas Superiores por Estado + Filtro Terminal */}
       <div className="bg-white border border-zinc-200 rounded-xl shadow-2xs overflow-hidden">
         <div className="p-4 bg-[#F4F4F5] border-b border-zinc-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -297,8 +447,8 @@ export default function ProgramacionVuelosPage() {
                   type="button"
                   onClick={() => setEstadoTab(tab)}
                   className={`px-3 py-1.5 rounded text-xs font-semibold cursor-pointer transition-colors ${estadoTab === tab
-                      ? 'bg-[#0284C7] text-white'
-                      : 'bg-white border border-zinc-300 text-zinc-700 hover:bg-zinc-100'
+                    ? 'bg-[#0284C7] text-white'
+                    : 'bg-white border border-zinc-300 text-zinc-700 hover:bg-zinc-100'
                     }`}
                 >
                   {tab === 'ALL' ? `Todos (${vuelos.length})` : tab}
@@ -479,6 +629,7 @@ export default function ProgramacionVuelosPage() {
                     name="numeroVuelo"
                     type="text"
                     required
+                    maxLength={20}
                     value={numeroVuelo}
                     onChange={(e) => setNumeroVuelo(e.target.value.toUpperCase())}
                     placeholder="AM-510"
@@ -498,14 +649,25 @@ export default function ProgramacionVuelosPage() {
                     name="rutaId"
                     required
                     value={rutaId}
-                    onChange={(e) => setRutaId(Number(e.target.value))}
+                    onChange={(e) => {
+                      const nextRutaId = Number(e.target.value);
+                      setRutaId(nextRutaId);
+                      const validGates = getGatesForRuta(nextRutaId, editing);
+                      const firstAvailable =
+                        validGates.find(
+                          (p) => p.activo && !p.estado.toUpperCase().includes('MANTEN')
+                        ) || validGates[0];
+                      setPuertaEmbarqueId(firstAvailable?.id || 0);
+                    }}
                     className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                   >
-                    {rutas.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {getRutaLabel(r.id)}
-                      </option>
-                    ))}
+                    {rutas
+                      .filter((r) => r.activo || (editing && r.id === editing.rutaId))
+                      .map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {getRutaLabel(r.id)}
+                        </option>
+                      ))}
                   </select>
                 </div>
               </div>
@@ -531,11 +693,38 @@ export default function ProgramacionVuelosPage() {
                     }}
                     className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                   >
-                    {aviones.map((av) => (
-                      <option key={av.id} value={av.id}>
-                        {av.matricula} ({av.capacidadFisica} PAX - {av.estadoOperativo})
-                      </option>
-                    ))}
+                    {aviones
+                      .filter((av) => av.activo || (editing && av.id === editing.avionId))
+                      .map((av) => {
+                        const nonOp =
+                          !av.activo ||
+                          av.estadoOperativo.toUpperCase().includes('MANTEN') ||
+                          av.estadoOperativo.toUpperCase().includes('FUERA');
+                        const conflict = !nonOp
+                          ? getAvionScheduleConflict(
+                              av.id,
+                              fechaHoraSalida,
+                              fechaHoraLlegada,
+                              editing?.id
+                            )
+                          : undefined;
+                        const isCurrentEdit = Boolean(editing && editing.avionId === av.id);
+                        return (
+                          <option
+                            key={av.id}
+                            value={av.id}
+                            disabled={(nonOp && !isCurrentEdit) || Boolean(conflict)}
+                          >
+                            {av.matricula} ({av.capacidadFisica} PAX -{' '}
+                            {nonOp
+                              ? `${av.activo ? av.estadoOperativo : 'Inactivo'} — No disponible`
+                              : conflict
+                                ? `Ocupado en ${conflict.numeroVuelo} — No disponible`
+                                : av.estadoOperativo}
+                            )
+                          </option>
+                        );
+                      })}
                   </select>
                 </div>
 
@@ -544,7 +733,7 @@ export default function ProgramacionVuelosPage() {
                     htmlFor="vuelo-puerta"
                     className="block text-[11px] font-bold uppercase text-zinc-700 mb-1"
                   >
-                    Puerta de Embarque (Gate)
+                    Puerta de Embarque (Sede Origen)
                   </label>
                   <select
                     id="vuelo-puerta"
@@ -554,14 +743,45 @@ export default function ProgramacionVuelosPage() {
                     onChange={(e) => setPuertaEmbarqueId(Number(e.target.value))}
                     className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                   >
-                    {puertas.map((p) => {
-                      const inMaint = p.estado.toUpperCase().includes('MANTEN');
-                      return (
-                        <option key={p.id} value={p.id} disabled={inMaint}>
-                          GATE {p.codigoGate} ({inMaint ? 'Mantenimiento — No disponible' : p.estado})
-                        </option>
-                      );
-                    })}
+                    {(() => {
+                      const validGates = getGatesForRuta(rutaId, editing);
+                      if (validGates.length === 0) {
+                        return (
+                          <option value={0}>
+                            Sin puertas activas en el aeropuerto de origen
+                          </option>
+                        );
+                      }
+                      return validGates.map((p) => {
+                        const term = terminales.find((t) => t.id === p.terminalId);
+                        const aero = term
+                          ? aeropuertos.find((a) => a.id === term.aeropuertoId)
+                          : undefined;
+                        const sedeTag = term
+                          ? `${aero ? `${aero.codigoIata} · ` : ''}${term.codigo}`
+                          : `T#${p.terminalId}`;
+                        const inMaint = !p.activo || p.estado.toUpperCase().includes('MANTEN');
+                        const gateConflict = !inMaint
+                          ? getGateScheduleConflict(p.id, fechaHoraSalida, editing?.id)
+                          : undefined;
+                        const isCurrentEdit = Boolean(editing && editing.puertaEmbarqueId === p.id);
+                        return (
+                          <option
+                            key={p.id}
+                            value={p.id}
+                            disabled={(inMaint && !isCurrentEdit) || Boolean(gateConflict)}
+                          >
+                            GATE {p.codigoGate} — {sedeTag} (
+                            {inMaint
+                              ? `${p.activo ? 'Mantenimiento' : 'Inactiva'} — No disponible`
+                              : gateConflict
+                                ? `Ocupada ±45m por ${gateConflict.numeroVuelo} — No disponible`
+                                : p.estado}
+                            )
+                          </option>
+                        );
+                      });
+                    })()}
                   </select>
                 </div>
               </div>

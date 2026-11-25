@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axiosClient, { extractApiError } from '../../api/axiosClient';
 import { AeropuertoDto, RutaDto } from '../../types/models';
+import { notifyError, notifySuccess, notifyUndo } from '../../utils/notify';
 
 export default function RutasOperadorPage() {
   const [rutas, setRutas] = useState<RutaDto[]>([]);
@@ -42,8 +43,9 @@ export default function RutasOperadorPage() {
 
   const openCreate = () => {
     setEditing(null);
-    const first = aeropuertos[0]?.id || 0;
-    const second = aeropuertos[1]?.id || first;
+    const activeAeros = aeropuertos.filter((a) => a.activo);
+    const first = activeAeros[0]?.id || 0;
+    const second = activeAeros[1]?.id || first;
     setAeropuertoOrigenId(first);
     setAeropuertoDestinoId(second);
     setCodigoRuta('');
@@ -71,43 +73,46 @@ export default function RutasOperadorPage() {
     setErrorMsg(null);
 
     if (aeropuertoOrigenId === aeropuertoDestinoId) {
-      setErrorMsg(
-        'Regla de Dominio: El aeropuerto de origen y el aeropuerto de destino no pueden ser el mismo.'
+      notifyError(
+        'Regla de Dominio',
+        'El aeropuerto de origen y el aeropuerto de destino no pueden ser el mismo.'
       );
       return;
     }
 
+    const cleanCodigo = codigoRuta.trim().toUpperCase();
     try {
       if (editing) {
         await axiosClient.put(`/rutas/${editing.id}`, {
           id: editing.id,
-          codigoRuta: codigoRuta.trim().toUpperCase(),
+          codigoRuta: cleanCodigo,
           aeropuertoOrigenId,
           aeropuertoDestinoId,
           distanciaKm,
           duracionEstimadaMinutos,
           activo
         });
+        notifySuccess('Ruta actualizada', `El corredor ${cleanCodigo} fue actualizado.`);
       } else {
         await axiosClient.post('/rutas', {
-          codigoRuta: codigoRuta.trim().toUpperCase(),
+          codigoRuta: cleanCodigo,
           aeropuertoOrigenId,
           aeropuertoDestinoId,
           distanciaKm,
           duracionEstimadaMinutos
         });
+        notifySuccess('Ruta registrada', `El corredor ${cleanCodigo} fue creado exitosamente.`);
       }
       setShowModal(false);
       await loadData();
     } catch (err: any) {
-      setErrorMsg(
-        extractApiError(err, 'Error al guardar la ruta aérea.')
-      );
+      notifyError('No se pudo guardar la ruta', extractApiError(err, 'Error al guardar la ruta aérea.'));
     }
   };
 
   const handleToggleActivo = async (item: RutaDto) => {
     setErrorMsg(null);
+    const nextActivo = !item.activo;
     try {
       await axiosClient.put(`/rutas/${item.id}`, {
         id: item.id,
@@ -116,11 +121,28 @@ export default function RutasOperadorPage() {
         aeropuertoDestinoId: item.aeropuertoDestinoId,
         distanciaKm: item.distanciaKm,
         duracionEstimadaMinutos: item.duracionEstimadaMinutos,
-        activo: !item.activo
+        activo: nextActivo
       });
       await loadData();
+      if (!nextActivo) {
+        notifyUndo('Ruta desactivada', `La ruta ${item.codigoRuta} pasó a inactiva.`, async () => {
+          await axiosClient.put(`/rutas/${item.id}`, {
+            id: item.id,
+            codigoRuta: item.codigoRuta,
+            aeropuertoOrigenId: item.aeropuertoOrigenId,
+            aeropuertoDestinoId: item.aeropuertoDestinoId,
+            distanciaKm: item.distanciaKm,
+            duracionEstimadaMinutos: item.duracionEstimadaMinutos,
+            activo: true
+          });
+          await loadData();
+          notifySuccess('Ruta reactivada', `La ruta ${item.codigoRuta} volvió a estar activa.`);
+        });
+      } else {
+        notifySuccess('Ruta reactivada', `La ruta ${item.codigoRuta} está activa nuevamente.`);
+      }
     } catch (err: any) {
-      setErrorMsg(extractApiError(err, 'Error al cambiar estado de la ruta.'));
+      notifyError('Error al actualizar estado', extractApiError(err, 'Error al cambiar estado de la ruta.'));
     }
   };
 
@@ -128,8 +150,8 @@ export default function RutasOperadorPage() {
   const distanciaTotalRed = rutasActivas.reduce((acc, r) => acc + r.distanciaKm, 0);
   const promedioMinutos = rutasActivas.length
     ? Math.round(
-        rutasActivas.reduce((acc, r) => acc + r.duracionEstimadaMinutos, 0) / rutasActivas.length
-      )
+      rutasActivas.reduce((acc, r) => acc + r.duracionEstimadaMinutos, 0) / rutasActivas.length
+    )
     : 0;
 
   const formatDuration = (mins: number) => {
@@ -183,12 +205,6 @@ export default function RutasOperadorPage() {
           <span>Nueva Ruta Aérea</span>
         </button>
       </div>
-
-      {errorMsg && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs font-medium">
-          {errorMsg}
-        </div>
-      )}
 
       {/* 3 Tarjetas KPI calculadas de Sistema AeroManager */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -303,11 +319,10 @@ export default function RutasOperadorPage() {
                   </td>
                   <td className="py-3 px-4">
                     <span
-                      className={`inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold ${
-                        item.activo
+                      className={`inline-flex px-2 py-0.5 rounded border font-mono-code text-[11px] font-semibold ${item.activo
                           ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                           : 'bg-red-50 border-red-200 text-red-700'
-                      }`}
+                        }`}
                     >
                       {item.activo ? 'Activa' : 'Inactiva'}
                     </span>
@@ -366,6 +381,7 @@ export default function RutasOperadorPage() {
                 <input
                   type="text"
                   required
+                  maxLength={20}
                   value={codigoRuta}
                   onChange={(e) => setCodigoRuta(e.target.value.toUpperCase())}
                   placeholder="RUT-LIM-CUZ"
@@ -384,11 +400,13 @@ export default function RutasOperadorPage() {
                     onChange={(e) => setAeropuertoOrigenId(Number(e.target.value))}
                     className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                   >
-                    {aeropuertos.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.codigoIata} — {a.nombre}
-                      </option>
-                    ))}
+                    {aeropuertos
+                      .filter((a) => a.activo || (editing && a.id === editing.aeropuertoOrigenId))
+                      .map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.codigoIata} — {a.nombre}
+                        </option>
+                      ))}
                   </select>
                 </div>
 
@@ -402,11 +420,13 @@ export default function RutasOperadorPage() {
                     onChange={(e) => setAeropuertoDestinoId(Number(e.target.value))}
                     className="w-full h-9 px-3 rounded border border-zinc-300 text-xs bg-white outline-none focus:border-[#0284C7]"
                   >
-                    {aeropuertos.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.codigoIata} — {a.nombre}
-                      </option>
-                    ))}
+                    {aeropuertos
+                      .filter((a) => a.activo || (editing && a.id === editing.aeropuertoDestinoId))
+                      .map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.codigoIata} — {a.nombre}
+                        </option>
+                      ))}
                   </select>
                 </div>
               </div>
